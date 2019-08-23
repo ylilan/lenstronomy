@@ -13,27 +13,23 @@ class LensPreparation(object):
     Or, you know, shear, convergency, shift, then you wanna know deflection maps.
 
     """
-    def __init__(self,alphax,alphay,zl,zs,lenseq=True):
-        """
-        :param alphax: the x deflection map corresponds to data in dataclass
-        :param alphay: the y deflection map corresponds to data in dataclass
-        """
-        cosmo = LensCosmo(zl, zs)
-        dlsds = cosmo.D_ds / cosmo.D_s
-        if lenseq:
-            self.alphax = alphax* dlsds
-            self.alphay = alphay* dlsds
-        else:
-            self.alphax = alphax * dlsds*-1
-            self.alphax = alphax * dlsds*-1
-
+    def __init__(self,alphax,alphay,zl,zs):
+       """
+       :param alphax: the x deflection map corresponds to data in dataclass
+       :param alphay: the y deflection map corresponds to data in dataclass
+       :param zl: redshift of the lens
+       :param zs:  redshift of the lens
+       :param lenseq:
+       """
+       cosmo = LensCosmo(zl, zs)
+       dlsds = cosmo.D_ds / cosmo.D_s
+       self.alphax = alphax* dlsds
+       self.alphay = alphay* dlsds
 
 
     def initial_kwargs_lens(self,x,y,kwargs_data,alphax_shift=0, alphay_shift=0,lens_model_list=['SHIFT','SHEAR','CONVERGENCE','FLEXIONFG']):
         """
         This function returns list type of kwargs of lens models.
-        It requires: knowing the deflection maps
-         with knowing deflection maps
         :param lens_model_list: list of strings with lens model names
         :param alphax_shift: shift the source's x position
         :param alphay_shift: shift the source's y position
