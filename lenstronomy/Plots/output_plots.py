@@ -551,7 +551,7 @@ class ModelBandPlot(object):
         ax.get_yaxis().set_visible(False)
         ax.autoscale(False)
 
-        scale_bar(ax, self._frame_size, dist=1, text='1"', font_size=font_size)
+        scale_bar(ax, self._frame_size, dist=1, text='1.0"', font_size=font_size)
         text_description(ax, self._frame_size, text=text, color="w",
                          backgroundcolor='k', font_size=font_size)
 
@@ -585,7 +585,7 @@ class ModelBandPlot(object):
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
         ax.autoscale(False)
-        scale_bar(ax, self._frame_size, dist=1, text='1"', font_size=font_size)
+        scale_bar(ax, self._frame_size, dist=1, text='1.0"', font_size=font_size)
         text_description(ax, self._frame_size, text=text, color="w",
                          backgroundcolor='k', font_size=font_size)
         if 'no_arrow' not in kwargs or not kwargs['no_arrow']:

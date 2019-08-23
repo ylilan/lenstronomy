@@ -3,14 +3,12 @@ __author__ = 'lilan yang'
 import numpy as np
 from scipy import ndimage
 import matplotlib.pyplot as plt
+
 from lenstronomy.Util import kernel_util
 
 from astropy.stats import sigma_clipped_stats
 from astropy import wcs
-
-from photutils import detect_threshold
-from photutils import detect_sources,deblend_sources
-from photutils import source_properties
+from photutils import detect_threshold, detect_sources,deblend_sources, source_properties
 from photutils.datasets import make_noise_image
 
 
@@ -19,7 +17,20 @@ class DataPreparation(object):
     """
     The class contains useful fuctions to do, e.g. cut image, calculate cutsize, make mask of images.....
     """
-    def __init__(self, hdul,deltaPix, snr=3.0, npixels=20,exp_time=None,background_rms=None, background=None, error = None, kernel = None, interaction = True):
+    def __init__(self, hdul,deltaPix, snr=3.0, npixels=20,exp_time=None,background_rms=None,
+                 background=None, kernel = None, interaction = True):
+        """
+
+        :param hdul: fits format, image fits file.
+        :param deltaPix: float, pixel size
+        :param snr: float, signal-to-noise value
+        :param npixels: int, number of connected pixels that can be detected as a source
+        :param exp_time: float, exposure time of the fits files
+        :param background_rms: float,float or array_like, the gaussian 1-sigma background noise in data.
+        :param background: float or 2D array,background value of the input image.
+        :param kernel: The 2D array, filter the image before thresholding.
+        :param interaction:
+        """
         self.hdul = hdul
         self.deltaPix = deltaPix
         self.snr = snr
@@ -31,7 +42,6 @@ class DataPreparation(object):
         self.exp_time = exp_time
         self.background_rms = background_rms
         self.bakground = background
-        self.error = error
         self.kernel = kernel
         self.interaction= interaction
         self.image = hdul[0].data
@@ -70,7 +80,7 @@ class DataPreparation(object):
         snr=self.snr
         npixels=self.npixels
         bakground = self.bakground
-        error = self.error
+        error = self.background_rms
         kernel = self.kernel
         image_cutted = self.image[x - r_cut:x + r_cut + 1, y - r_cut:y + r_cut + 1]
         image_data = image_cutted
@@ -101,67 +111,52 @@ class DataPreparation(object):
         else:
             r_center = np.int(ysize_c)
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(9, 6))
-        ax1.imshow(image_data, origin='lower')
+        ax1.imshow(image_data, origin='lower',cmap="gist_heat")
         ax1.set_title(title_name1)
         ax2.imshow(segments_deblend, origin='lower')
         for i in range(nobjs):
-            ax2.text(xcenter[i]*1.1, ycenter[i], 'S'+repr(i), color='white')
-        ax2.text(image_data.shape[0]*0.5,image_data.shape[0]*0.1,'S'+repr(c_index)+' '+'in center',size=15,color='white')
+            ax2.text(xcenter[i]*1.1, ycenter[i], 'Seg'+repr(i), color='w')
+        ax2.text(image_data.shape[0]*0.5,image_data.shape[0]*0.1,'Seg '+repr(c_index)+' '+'in center',size=12,color='white')
         ax2.set_title(title_name2)
         plt.show(fig)
         fig.savefig(image_name)
-        return masks, center_mask, r_center
+        return masks, center_mask, r_center, [segments_deblend,xcenter,ycenter,c_index]
 
 
-    def r_center(self,x,y,r_cut=100):
-        """
-        This fuction is used cut out the center object.
-        :param image_data: 2-D array of the image that contains target object in the center.
-        :param snr: float, the signal-to-noise ratio per pixel above the background for which to consider a pixel as possibly being part of a source.
-        :param npixels:int,The number of connected pixels, each greater than threshold, that an object must have to be detected.
-                        npixels must be a positive integer.
-        :param background: float or array_like, optional
-                           The background value(s) of the input data. background may either be a scalar value or a 2D image with the same shape as the input data.
-                           If the input data has been background-subtracted, then set background to 0.0.
-                           If None, then a scalar background value will be estimated using sigma-clipped statistics.
-        :param error: The Gaussian 1-sigma standard deviation of the background noise in data.
-                       error should include all sources of background error, but exclude the Poisson error of the sources.
-                       If error is a 2D image, then it should represent the 1-sigma background error in each pixel of data.
-                       If None, then a scalar background rms value will be estimated using sigma-clipped statistics.
-        :param kernel: array-like (2D) or Kernel2D, optional
-                      The 2D array of the kernel used to filter the image before thresholding.
-                      Filtering the image will smooth the noise and maximize detectability of objects with a shape similar to the kernel.
-        :param sigclip_sigma:float, optional
-                        The number of standard deviations to use as the clipping limit when calculating the image background statistics.
-        :param plt_show: plot detect objects or not.
-        :param manually_option: user interaction option.
-        :return: int, the cut size of the center object.
-        """
-        _,_,r_center= self._seg_image(x,y,r_cut=r_cut)
-        cutsize_data=np.int(r_center/2.+ 10)
-        if self.interaction:
+    def r_center(self,x,y,r_cut=100,image_name='seg.pdf'):
+     """
+
+     :param x: x coordinate
+     :param y: y coordinate
+     :param r_cut: int format value, radius of cut out image
+     :param image_name: string, name of the image
+     :return: cutout size
+     """
+     _,_,cutsize_center,_= self._seg_image(x,y,r_cut=r_cut,image_name=image_name)
+     cutsize_data=np.int(cutsize_center/2.+ 10)
+     if self.interaction:
             cutted_image=self.cut_image(x, y, cutsize_data)
             fig_ci=plt.figure()
-            plt.imshow(cutted_image, origin='lower')
-            plt.title('Good framesize? (framesize=' + repr(cutsize_data*2+1) + ')')
+            plt.imshow(cutted_image, origin='lower',cmap="gist_heat")
+            plt.title('Good framesize? ('+repr(cutsize_data*2+1)+'x'+repr(cutsize_data*2+1)+' pixels^2' + ')')
             plt.show(fig_ci)
-            cutyn = raw_input('Hint: appropriate cutsize? (y/n): ')
+            cutyn = raw_input('Hint: appropriate framesize? (y/n): ')
             if cutyn == 'n':
-                cutsize_ = np.int(input('Hint: please tell me an appropriate cutsize (framesize=2*cutsize+1)? (int fotmat): '))
+                cutsize_ = np.int(input('Hint: please tell me an appropriate cutsize (framesize=2*cutsize+1)? (int format): '))
                 cutsize_data = cutsize_
                 cutted_image_new = self.cut_image(x, y, cutsize_data)
-                plt.imshow(cutted_image_new, origin='lower')
+                plt.imshow(cutted_image_new, origin='lower',cmap="gist_heat")
                 plt.title('Cutted Data (framesize=' + repr(cutsize_data*2+1) + ')')
                 plt.show()
             elif cutyn == 'y':
                 cutsize_data=cutsize_data
             else:
                 raise ValueError("Please input 'y' or 'n' !")
-        return cutsize_data
+     return cutsize_data
 
 
 
-    def pick_data(self,x,y, r_cut, add_mask=5):
+    def pick_data(self, x,y, r_cut, add_mask=5,image_name='resegs_map.pdf',cleanedimg_name='cleaned_img.pdf'):
        """
        Function to pick up the pieces of data.
        :param x: x coordinate.
@@ -171,10 +166,10 @@ class DataPreparation(object):
        :return: kwargs_data
        """
        selem = np.ones((add_mask, add_mask))
-       obj_masks, data_masks_center, _ = self._seg_image(x, y, r_cut=r_cut,image_name='resegs_map.pdf',title_name1="Cutout Image")
+       obj_masks, data_masks_center, _, segments_deblend_list = self._seg_image(x, y, r_cut=r_cut,image_name=image_name,title_name1="Cutout Image")
        image = self.cut_image(x,y,r_cut)
        if self.interaction:
-            source_mask_index = input('Tell me mask index (list format)=')
+            source_mask_index = input('Input segmentation index, e.g.,[0,1]. (list format)=')
             src_mask = np.zeros_like(image)
             for i in source_mask_index:
                 src_mask = src_mask + obj_masks[i]
@@ -189,18 +184,25 @@ class DataPreparation(object):
                                    stddev=std, random_state=12)
        no_source_mask = (img_mask * -1 + 1) * img_bkg
        picked_data = source_mask + no_source_mask
-
-       f, axes = plt.subplots(1, 2, figsize=(9, 6))
+       c_index = segments_deblend_list[3]
+       f, axes = plt.subplots(1, 3, figsize=(18, 6))
        vmax = image.max()
        vmin = image.min()
        ax1 = axes[0]
-       ax1.imshow(image, origin='lower', vmin=vmin, vmax=vmax)
+       ax1.imshow(image, origin='lower', vmin=vmin, vmax=vmax, cmap="gist_heat")
        ax1.set_title("Cutout Image")
        ax2 = axes[1]
-       ax2.imshow(picked_data, origin='lower', vmin=vmin, vmax=vmax)
-       ax2.set_title("Cleaned Image")
+       ax2.imshow(segments_deblend_list[0],origin='lower')
+       for i in range(len(segments_deblend_list[1])):
+           ax2.text(segments_deblend_list[1][i] * 1.1, segments_deblend_list[2][i], 'Seg' + repr(i), color='w')
+       ax2.text(image.shape[0] * 0.5, image.shape[0] * 0.1, 'Seg ' + repr(c_index) + ' ' + 'in center',
+                size=12, color='white')
+       ax2.set_title('Segmentation of Detected Sources')
+       ax3 = axes[2]
+       ax3.imshow(picked_data, origin='lower', vmin=vmin, vmax=vmax, cmap="gist_heat")
+       ax3.set_title("Cleaned Image")
        plt.show()
-       f.savefig('cleaned_img.pdf')
+       f.savefig(cleanedimg_name)
        ra_at_xy_0 = (y - r_cut) * self.deltaPix  # (ra,dec) is (y_img,x_img)
        dec_at_xy_0 = (x - r_cut) * self.deltaPix
        kwargs_data = {}
@@ -234,5 +236,7 @@ class DataPreparation(object):
         else:
             pixel_size=pixel_size
         kwargs_psf = {'psf_type': 'PIXEL', 'kernel_point_source': image_psf_cut, 'pixel_size': pixel_size}
-
+        plt.imshow(np.log10(image_psf_cut), origin='lower', cmap="gist_heat")
+        plt.title('PSF')
+        plt.show()
         return kwargs_psf
