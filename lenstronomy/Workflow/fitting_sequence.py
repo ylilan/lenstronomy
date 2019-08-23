@@ -9,6 +9,7 @@ from lenstronomy.Sampling.Samplers.multinest_sampler import MultiNestSampler
 from lenstronomy.Sampling.Samplers.polychord_sampler import DyPolyChordSampler
 from lenstronomy.Sampling.Samplers.dynesty_sampler import DynestySampler
 import numpy as np
+import lenstronomy.Util.analysis_util as analysis_util
 
 
 class FittingSequence(object):
@@ -127,7 +128,7 @@ class FittingSequence(object):
         num_param_nonlinear = self.param_class.num_param()[0]
         num_param_linear = self.param_class.num_param_linear()
         num_param = num_param_nonlinear + num_param_linear
-        bic = -2*self.best_fit_likelihood + (np.log(num_data)*num_param)
+        bic = analysis_util.bic_model(self.best_fit_likelihood,num_data,num_param)
         print "number of the free model parameters:", num_param
         print "number of the data points:",num_data
         return bic
