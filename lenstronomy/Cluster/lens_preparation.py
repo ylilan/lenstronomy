@@ -82,3 +82,4 @@ class LensPreparation(object):
         magnification=np.abs(magnification.mean())
         return kwargs_lens, magnification
 
+

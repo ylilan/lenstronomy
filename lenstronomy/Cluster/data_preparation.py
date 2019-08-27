@@ -3,6 +3,7 @@ __author__ = 'lilan yang'
 import numpy as np
 from scipy import ndimage
 import matplotlib.pyplot as plt
+from astropy.io import fits
 
 from lenstronomy.Util import kernel_util
 
@@ -17,7 +18,7 @@ class DataPreparation(object):
     """
     The class contains useful fuctions to do, e.g. cut image, calculate cutsize, make mask of images.....
     """
-    def __init__(self, hdul,deltaPix, snr=3.0, npixels=20,exp_time=None,background_rms=None,
+    def __init__(self, data, deltaPix, snr=3.0, npixels=20,exp_time=None,background_rms=None,
                  background=None, kernel = None, interaction = True):
         """
 
@@ -31,12 +32,12 @@ class DataPreparation(object):
         :param kernel: The 2D array, filter the image before thresholding.
         :param interaction:
         """
-        self.hdul = hdul
+        self.hdul = fits.open(data)
         self.deltaPix = deltaPix
         self.snr = snr
         self.npixels = npixels
         if exp_time is None:
-            exp_time = hdul[0].header['EXPTIME']
+            exp_time = self.hdul[0].header['EXPTIME']
         else:
             exp_time = exp_time
         self.exp_time = exp_time
@@ -44,7 +45,7 @@ class DataPreparation(object):
         self.bakground = background
         self.kernel = kernel
         self.interaction= interaction
-        self.image = hdul[0].data
+        self.image = self.hdul[0].data
 
 
     def radec2detector(self,ra,dec):
@@ -76,7 +77,17 @@ class DataPreparation(object):
         image_cutted = image[x - r_cut:x + r_cut + 1, y - r_cut:y + r_cut + 1]
         return image_cutted
 
-    def _seg_image(self, x, y, r_cut=100,image_name='segs_map.pdf',title_name1='Input Image',title_name2='Segmentation of Detected Sources'):
+    def _seg_image(self, x, y, r_cut=100):
+        """
+        detect and deblend sources into segmentation maps
+        :param x:
+        :param y:
+        :param r_cut:
+        :param image_name:
+        :param title_name1:
+        :param title_name2:
+        :return:
+        """
         snr=self.snr
         npixels=self.npixels
         bakground = self.bakground
@@ -95,9 +106,10 @@ class DataPreparation(object):
         dist = ((xcenter - image_data_size) ** 2 + (ycenter - image_data_size) ** 2) ** 0.5
         c_index = np.where(dist == dist.min())[0][0]
         center_mask=(segments_deblend.data==c_index+1)*1 #supposed to be the data mask
-        masks = []
+        obj_masks = []
         for i in range(nobjs):
-            masks.append((segments_deblend.data==i+1)*1)
+            mask = ((segments_deblend.data==i+1)*1)
+            obj_masks.append(mask)
         xmin = segments_deblend_info.to_table(columns=['xmin'])['xmin'].value
         xmax = segments_deblend_info.to_table(columns=['xmax'])['xmax'].value
         ymin = segments_deblend_info.to_table(columns=['ymin'])['ymin'].value
@@ -110,20 +122,11 @@ class DataPreparation(object):
             r_center = np.int(xsize_c)
         else:
             r_center = np.int(ysize_c)
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(9, 6))
-        ax1.imshow(image_data, origin='lower',cmap="gist_heat")
-        ax1.set_title(title_name1)
-        ax2.imshow(segments_deblend, origin='lower')
-        for i in range(nobjs):
-            ax2.text(xcenter[i]*1.1, ycenter[i], 'Seg'+repr(i), color='w')
-        ax2.text(image_data.shape[0]*0.5,image_data.shape[0]*0.1,'Seg '+repr(c_index)+' '+'in center',size=12,color='white')
-        ax2.set_title(title_name2)
-        plt.show(fig)
-        fig.savefig(image_name)
-        return masks, center_mask, r_center, [segments_deblend,xcenter,ycenter,c_index]
+        center_mask_info= [center_mask, r_center, xcenter, ycenter, c_index]
+        return obj_masks, center_mask_info, segments_deblend
 
 
-    def r_center(self,x,y,r_cut=100,image_name='seg.pdf'):
+    def cutsize(self,x,y,r_cut=100):
      """
 
      :param x: x coordinate
@@ -132,22 +135,17 @@ class DataPreparation(object):
      :param image_name: string, name of the image
      :return: cutout size
      """
-     _,_,cutsize_center,_= self._seg_image(x,y,r_cut=r_cut,image_name=image_name)
-     cutsize_data=np.int(cutsize_center/2.+ 10)
+     cutsize_data = r_cut
      if self.interaction:
-            cutted_image=self.cut_image(x, y, cutsize_data)
+            m_image = self.cut_image(x, y, r_cut)
             fig_ci=plt.figure()
-            plt.imshow(cutted_image, origin='lower',cmap="gist_heat")
+            plt.imshow(m_image, origin='lower',cmap="gist_heat")
             plt.title('Good framesize? ('+repr(cutsize_data*2+1)+'x'+repr(cutsize_data*2+1)+' pixels^2' + ')')
             plt.show(fig_ci)
             cutyn = raw_input('Hint: appropriate framesize? (y/n): ')
             if cutyn == 'n':
-                cutsize_ = np.int(input('Hint: please tell me an appropriate cutsize (framesize=2*cutsize+1)? (int format): '))
+                cutsize_ = np.int(raw_input('Hint: please tell me an appropriate cutsize (framesize=2*cutsize+1)? (int format): '))
                 cutsize_data = cutsize_
-                cutted_image_new = self.cut_image(x, y, cutsize_data)
-                plt.imshow(cutted_image_new, origin='lower',cmap="gist_heat")
-                plt.title('Cutted Data (framesize=' + repr(cutsize_data*2+1) + ')')
-                plt.show()
             elif cutyn == 'y':
                 cutsize_data=cutsize_data
             else:
@@ -156,7 +154,7 @@ class DataPreparation(object):
 
 
 
-    def pick_data(self, x,y, r_cut, add_mask=5,image_name='resegs_map.pdf',cleanedimg_name='cleaned_img.pdf'):
+    def data_assemble(self, x,y, r_cut, add_mask=5):
        """
        Function to pick up the pieces of data.
        :param x: x coordinate.
@@ -165,10 +163,13 @@ class DataPreparation(object):
        :param add_mask: number of pixels adding around picked pieces
        :return: kwargs_data
        """
-       selem = np.ones((add_mask, add_mask))
-       obj_masks, data_masks_center, _, segments_deblend_list = self._seg_image(x, y, r_cut=r_cut,image_name=image_name,title_name1="Cutout Image")
+
+       obj_masks,center_mask_info, segments_deblend_list = self._seg_image(x, y, r_cut=r_cut)
+       data_masks_center, _, xcenter, ycenter, c_index = center_mask_info
        image = self.cut_image(x,y,r_cut)
+       self.raw_image = image
        if self.interaction:
+            self.plot_segmentation(image, segments_deblend_list, xcenter, ycenter, c_index)
             source_mask_index = input('Input segmentation index, e.g.,[0,1]. (list format)=')
             src_mask = np.zeros_like(image)
             for i in source_mask_index:
@@ -176,7 +177,9 @@ class DataPreparation(object):
             mask = src_mask
        else:
             mask = data_masks_center
+       selem = np.ones((add_mask, add_mask))
        img_mask = ndimage.binary_dilation(mask.astype(np.bool), selem)
+       self.data_mask = mask
        source_mask = image * img_mask
        _, _, std = sigma_clipped_stats(image, sigma=3.0, mask=source_mask)
        tshape = image.shape
@@ -184,25 +187,7 @@ class DataPreparation(object):
                                    stddev=std, random_state=12)
        no_source_mask = (img_mask * -1 + 1) * img_bkg
        picked_data = source_mask + no_source_mask
-       c_index = segments_deblend_list[3]
-       f, axes = plt.subplots(1, 3, figsize=(18, 6))
-       vmax = image.max()
-       vmin = image.min()
-       ax1 = axes[0]
-       ax1.imshow(image, origin='lower', vmin=vmin, vmax=vmax, cmap="gist_heat")
-       ax1.set_title("Cutout Image")
-       ax2 = axes[1]
-       ax2.imshow(segments_deblend_list[0],origin='lower')
-       for i in range(len(segments_deblend_list[1])):
-           ax2.text(segments_deblend_list[1][i] * 1.1, segments_deblend_list[2][i], 'Seg' + repr(i), color='w')
-       ax2.text(image.shape[0] * 0.5, image.shape[0] * 0.1, 'Seg ' + repr(c_index) + ' ' + 'in center',
-                size=12, color='white')
-       ax2.set_title('Segmentation of Detected Sources')
-       ax3 = axes[2]
-       ax3.imshow(picked_data, origin='lower', vmin=vmin, vmax=vmax, cmap="gist_heat")
-       ax3.set_title("Cleaned Image")
-       plt.show()
-       f.savefig(cleanedimg_name)
+       self.data = picked_data
        ra_at_xy_0 = (y - r_cut) * self.deltaPix  # (ra,dec) is (y_img,x_img)
        dec_at_xy_0 = (x - r_cut) * self.deltaPix
        kwargs_data = {}
@@ -217,9 +202,10 @@ class DataPreparation(object):
        kwargs_data['image_data'] = picked_data
        return kwargs_data
 
+
     def pick_psf(self, x, y, r_cut, pixel_size=None, kernel_size=None):
         """
-
+        select psf
         :param x:  x coordinate.
         :param y:  y coordinate.
         :param r_cut: radius size of the psf.
@@ -236,7 +222,70 @@ class DataPreparation(object):
         else:
             pixel_size=pixel_size
         kwargs_psf = {'psf_type': 'PIXEL', 'kernel_point_source': image_psf_cut, 'pixel_size': pixel_size}
-        plt.imshow(np.log10(image_psf_cut), origin='lower', cmap="gist_heat")
-        plt.title('PSF')
-        plt.show()
         return kwargs_psf
+
+
+
+    def plot_data_assemble(self,add_mask=5):
+        """
+
+        :param add_mask:
+        :return:
+        """
+
+        mask = self.data_mask
+        image = self.raw_image
+        picked_data = self.data
+        selem = np.ones((add_mask, add_mask))
+        img_mask = ndimage.binary_dilation(mask.astype(np.bool), selem)
+        fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(16, 10))
+        ax1.imshow(image, origin='lower', cmap="gist_heat")
+        ax1.set_title('Input Image')
+        ax2.imshow(img_mask+mask, origin='lower',cmap="gist_heat")
+        ax2.set_title('Selected pixels')
+        ax3.imshow(picked_data, origin='lower',cmap="gist_heat")
+        ax3.set_title('Data')
+        plt.show()
+        return 0
+
+
+
+    def plot_segmentation(self,image_data,segments_deblend,xcenter,ycenter,c_index):
+        """
+        show segmentation map of image_data
+        :param image_data:
+        :param segments_deblend:
+        :param nobjs:
+        :param xcenter:
+        :param ycenter:
+        :param c_index:
+        :return:
+        """
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(9, 6))
+        ax1.imshow(image_data, origin='lower',cmap="gist_heat")
+        ax1.set_title('Input Image')
+        ax2.imshow(segments_deblend, origin='lower')
+        for i in range(len(xcenter)):
+            ax2.text(xcenter[i]*1.1, ycenter[i], 'Seg'+repr(i), color='w')
+        ax2.text(image_data.shape[0]*0.5,image_data.shape[0]*0.1,'Seg '+repr(c_index)+' '+'in center',size=12,color='white')
+        ax2.set_title('Segmentations (S/N >'+repr(self.snr)+')')
+        plt.show()
+        return 0
+
+
+    def kwargs_data_psf(self,ra,dec,r_cut,x_psf,y_psf,add_mask):
+        ximg_list = []
+        yimg_list = []
+        kwargs_data_list = []
+        kwargs_psf_list = []
+        for i in range(len(ra)):
+            xy = self.radec2detector(ra[i], dec[i])
+            cutsize = self.cutsize(xy[0], xy[1], r_cut=r_cut)
+            kwargs_data = self.data_assemble(x=xy[0], y=xy[1], r_cut=cutsize,add_mask=add_mask)
+            kwargs_psf = self.pick_psf(x=x_psf, y=y_psf, r_cut=cutsize)
+            kwargs_psf_list.append(kwargs_psf)
+            kwargs_data_list.append(kwargs_data)
+            ximg_list.append(xy[0])
+            yimg_list.append(xy[1])
+            self.plot_data_assemble(add_mask=add_mask)
+        return ximg_list,yimg_list,kwargs_data_list,kwargs_psf_list
