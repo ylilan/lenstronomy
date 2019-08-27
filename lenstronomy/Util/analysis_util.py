@@ -128,12 +128,12 @@ def ellipticities(I_xy, x, y):
     return e1 / (1+bkg), e2 / (1+bkg)
 
 
-def bic_model(likelihood,num_data,num_param):
+def bic_model(logL,num_data,num_param):
     """
-    :param likelihood: logL, likelihood value
+    :param logL: log likelihood value
     :param num_data: numbers of data
     :param num_param: numbers of model parameters
     :return:
     """
-    bic = -2 * likelihood + (np.log(num_data) * num_param)
+    bic = -2 * logL + (np.log(num_data) * num_param)
     return bic

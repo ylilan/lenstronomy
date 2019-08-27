@@ -11,7 +11,6 @@ from lenstronomy.Sampling.Samplers.dynesty_sampler import DynestySampler
 import numpy as np
 import lenstronomy.Util.analysis_util as analysis_util
 
-
 class FittingSequence(object):
     """
     class to define a sequence of fitting applied, inherit the Fitting class
