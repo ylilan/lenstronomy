@@ -73,12 +73,12 @@ class LensPreparation(object):
                 kappa_center = kappa.mean()
                 kwargs_lens.append({'kappa_ext': kappa_center, 'ra_0': ra_center, 'dec_0': dec_center})
             elif lens_type == 'FLEXION':
-                g1, g2, g3, g4 = NumericLens(['INTERPOL']).Dmatrix(util.image2array(xaxes),
+                g1, g2, g3, g4 = NumericLens(['INTERPOL']).flexion(util.image2array(xaxes),
                                                                    util.image2array(yaxes), kwargs=kwargs_lens_in)
                 g1_c, g2_c, g3_c, g4_c = g1.mean(), g2.mean(), g3.mean(), g4.mean()
                 kwargs_lens.append({'g1': g1_c,'g2':g2_c,'g3':g3_c,'g4':g4_c, 'ra_0': ra_center, 'dec_0': dec_center})
             elif lens_type == 'FLEXIONFG':
-                g1, g2, g3, g4 = NumericLens(['INTERPOL']).Dmatrix(util.image2array(xaxes),
+                g1, g2, g3, g4 = NumericLens(['INTERPOL']).flexion(util.image2array(xaxes),
                                                                    util.image2array(yaxes), kwargs=kwargs_lens_in)
                 g1_c, g2_c, g3_c, g4_c = g1.mean(), g2.mean(), g3.mean(), g4.mean()
                 F1_c = (g1_c + g3_c) * 0.5
