@@ -141,6 +141,21 @@ class FittingSequence(object):
         return bic
 
     @property
+    def bic(self):
+        """
+        returns the bayesian information criterion of the model.
+        :return: bic value, float
+        """
+        num_data = self.likelihoodModule.num_data
+        num_param_nonlinear = self.param_class.num_param()[0]
+        num_param_linear = self.param_class.num_param_linear()
+        num_param = num_param_nonlinear + num_param_linear
+        bic = analysis_util.bic_model(self.best_fit_likelihood,num_data,num_param)
+        print "number of the free model parameters:", num_param
+        print "number of the data points:",num_data
+        return bic
+
+    @property
     def param_class(self):
         """
 
@@ -238,8 +253,8 @@ class FittingSequence(object):
         return kwargs_result, chain, param_list
 
     def nested_sampling(self, sampler_type='MULTINEST', kwargs_run={},
-                        prior_type='uniform', width_scale=1, sigma_scale=1,
-                        output_basename='chain', remove_output_dir=True,
+                        prior_type='uniform', width_scale=1, sigma_scale=1, 
+                        output_basename='chain', remove_output_dir=True, 
                         dypolychord_dynamic_goal=0.8,
                         polychord_settings={},
                         dypolychord_seed_increment=200,
@@ -303,7 +318,7 @@ class FittingSequence(object):
                                      prior_sigmas=sigma_start,
                                      width_scale=width_scale,
                                      sigma_scale=sigma_scale,
-                                     bound=dynesty_bound,
+                                     bound=dynesty_bound, 
                                      sample=dynesty_sample,
                                      use_mpi=self._mpi)
             samples, means, logZ, logZ_err, logL, results_object = sampler.run(kwargs_run)

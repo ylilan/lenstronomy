@@ -59,16 +59,25 @@ class NumericLens(LensModel):
         f_yx = dalpha_decra
         return f_xx, f_xy, f_yx, f_yy
 
-    def Dmatrix(self, x, y, kwargs, diff=diff):
+    def flexion(self, x, y, kwargs, diff=0.000001):
         """
-        computes the differentials f_xxx, f_yyy, f_xxy, fyy_x from f_xx, f_xy, f_yx,f_yy
-        :return: f_xxx, f_xxy, f_yyx, f_yyy
+        third derivatives (flexion)
+
+        :param x: x-position (preferentially arcsec)
+        :type x: numpy array
+        :param y: y-position (preferentially arcsec)
+        :type y: numpy array
+        :param kwargs: list of keyword arguments of lens model parameters matching the lens model classes
+        :param diff: numerical differential length of Hessian
+        :return: f_xxx, f_xxy, f_xyy, f_yyy
         """
         f_xx, f_xy, f_yx, f_yy = self.hessian(x, y, kwargs)
+
         f_xx_dx, f_xy_dx, f_yx_dx, f_yy_dx = self.hessian(x + diff, y, kwargs)
         f_xx_dy, f_xy_dy, f_yx_dy, f_yy_dy = self.hessian(x, y + diff, kwargs)
+
         f_xxx = (f_xx_dx - f_xx) / diff
-        f_xxy = (f_xy_dx - f_xy) / diff
-        f_yyx = (f_yx_dy - f_yx) / diff
+        f_xxy = (f_xx_dy - f_xx) / diff
+        f_xyy = (f_xy_dy - f_xy) / diff
         f_yyy = (f_yy_dy - f_yy) / diff
-        return f_xxx, f_xxy, f_yyx, f_yyy
+        return f_xxx, f_xxy, f_xyy, f_yyy
