@@ -11,6 +11,7 @@ from lenstronomy.Sampling.Samplers.dynesty_sampler import DynestySampler
 import numpy as np
 import lenstronomy.Util.analysis_util as analysis_util
 
+
 class FittingSequence(object):
     """
     class to define a sequence of fitting applied, inherit the Fitting class
@@ -104,6 +105,15 @@ class FittingSequence(object):
 
         return self._updateManager.best_fit(bijective=bijective)
 
+    def update_state(self, kwargs_update):
+        """
+        updates current best fit state to the input model keywords specified.
+
+        :param kwargs_update: format of kwargs_result
+        :return: None
+        """
+        self._updateManager.update_param_state(**kwargs_update)
+
     @property
     def best_fit_likelihood(self):
         """
@@ -117,7 +127,6 @@ class FittingSequence(object):
         logL, _ = likelihoodModule.logL(param_class.kwargs2args(**kwargs_result))
         return logL
 
-
     @property
     def bic(self):
         """
@@ -130,8 +139,6 @@ class FittingSequence(object):
         num_param = num_param_nonlinear + num_param_linear
         bic = analysis_util.bic_model(self.best_fit_likelihood,num_data,num_param)
         return bic
-
-
 
     @property
     def bic(self):
@@ -286,8 +293,7 @@ class FittingSequence(object):
             samples, means, logZ, logZ_err, logL, results_object = sampler.run(kwargs_run)
 
         elif sampler_type == 'DYPOLYCHORD':
-            if 'resume_dyn_run' in kwargs_run and \
-                    kwargs_run['resume_dyn_run'] is True:
+            if 'resume_dyn_run' in kwargs_run and kwargs_run['resume_dyn_run'] is True:
                 resume_dyn_run = True
             else:
                 resume_dyn_run = False
@@ -303,8 +309,7 @@ class FittingSequence(object):
                                          remove_output_dir=remove_output_dir,
                                          resume_dyn_run=resume_dyn_run,
                                          use_mpi=self._mpi)
-            samples, means, logZ, logZ_err, logL, results_object \
-                = sampler.run(dypolychord_dynamic_goal, kwargs_run)
+            samples, means, logZ, logZ_err, logL, results_object = sampler.run(dypolychord_dynamic_goal, kwargs_run)
 
         elif sampler_type == 'DYNESTY':
             sampler = DynestySampler(self.likelihoodModule,
