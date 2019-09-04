@@ -11,6 +11,7 @@ from lenstronomy.Sampling.Samplers.dynesty_sampler import DynestySampler
 import numpy as np
 import lenstronomy.Util.analysis_util as analysis_util
 
+
 class FittingSequence(object):
     """
     class to define a sequence of fitting applied, inherit the Fitting class
@@ -104,6 +105,15 @@ class FittingSequence(object):
 
         return self._updateManager.best_fit(bijective=bijective)
 
+    def update_state(self, kwargs_update):
+        """
+        updates current best fit state to the input model keywords specified.
+
+        :param kwargs_update: format of kwargs_result
+        :return: None
+        """
+        self._updateManager.update_param_state(**kwargs_update)
+
     @property
     def best_fit_likelihood(self):
         """
@@ -128,8 +138,6 @@ class FittingSequence(object):
         num_param_linear = self.param_class.num_param_linear()
         num_param = num_param_nonlinear + num_param_linear
         bic = analysis_util.bic_model(self.best_fit_likelihood,num_data,num_param)
-        print "number of the free model parameters:", num_param
-        print "number of the data points:",num_data
         return bic
 
     @property
@@ -177,7 +185,6 @@ class FittingSequence(object):
         num_param, param_list = param_class.num_param()
         # run MCMC
         if not init_samples is None and re_use_samples is True:
-            print("test that you are here!")
             num_samples, num_param_prev = np.shape(init_samples)
             print(num_samples, num_param_prev, num_param, 'shape of init_sample')
             if num_param_prev == num_param:
@@ -231,8 +238,8 @@ class FittingSequence(object):
         return kwargs_result, chain, param_list
 
     def nested_sampling(self, sampler_type='MULTINEST', kwargs_run={},
-                        prior_type='uniform', width_scale=1, sigma_scale=1, 
-                        output_basename='chain', remove_output_dir=True, 
+                        prior_type='uniform', width_scale=1, sigma_scale=1,
+                        output_basename='chain', remove_output_dir=True,
                         dypolychord_dynamic_goal=0.8,
                         polychord_settings={},
                         dypolychord_seed_increment=200,
@@ -271,6 +278,10 @@ class FittingSequence(object):
             samples, means, logZ, logZ_err, logL, results_object = sampler.run(kwargs_run)
 
         elif sampler_type == 'DYPOLYCHORD':
+            if 'resume_dyn_run' in kwargs_run and kwargs_run['resume_dyn_run'] is True:
+                resume_dyn_run = True
+            else:
+                resume_dyn_run = False
             sampler = DyPolyChordSampler(self.likelihoodModule,
                                          prior_type=prior_type,
                                          prior_means=mean_start,
@@ -280,11 +291,10 @@ class FittingSequence(object):
                                          output_dir=output_dir,
                                          output_basename=output_basename,
                                          polychord_settings=polychord_settings,
-                                         seed_increment=dypolychord_seed_increment,
                                          remove_output_dir=remove_output_dir,
+                                         resume_dyn_run=resume_dyn_run,
                                          use_mpi=self._mpi)
-            samples, means, logZ, logZ_err, logL, results_object \
-                = sampler.run(dypolychord_dynamic_goal, kwargs_run)
+            samples, means, logZ, logZ_err, logL, results_object = sampler.run(dypolychord_dynamic_goal, kwargs_run)
 
         elif sampler_type == 'DYNESTY':
             sampler = DynestySampler(self.likelihoodModule,
@@ -293,7 +303,7 @@ class FittingSequence(object):
                                      prior_sigmas=sigma_start,
                                      width_scale=width_scale,
                                      sigma_scale=sigma_scale,
-                                     bound=dynesty_bound, 
+                                     bound=dynesty_bound,
                                      sample=dynesty_sample,
                                      use_mpi=self._mpi)
             samples, means, logZ, logZ_err, logL, results_object = sampler.run(kwargs_run)
@@ -301,7 +311,7 @@ class FittingSequence(object):
         else:
             raise ValueError('Sampler type %s not supported.' % sampler_type)
         # update current best fit values
-        self._update_state(means)
+        self._update_state(samples[-1])
 
         output = [sampler_type, samples, sampler.param_names, logL, 
                   logZ, logZ_err, results_object]

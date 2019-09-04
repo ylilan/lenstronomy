@@ -3,6 +3,7 @@ import lenstronomy.Util.util as util
 from lenstronomy.LensModel.numeric_lens_differentials import NumericLens
 from lenstronomy.Data.imaging_data import ImageData
 from lenstronomy.Cosmo.lens_cosmo import LensCosmo
+from astropy.io import fits
 
 
 class LensPreparation(object):
@@ -13,7 +14,7 @@ class LensPreparation(object):
     Or, you know, shear, convergency, shift, then you wanna know deflection maps.
 
     """
-    def __init__(self,alphax,alphay,zl,zs):
+    def __init__(self,xdeflection,ydeflection,zl,zs,lenseq='1'):
        """
        :param alphax: the x deflection map corresponds to data in dataclass
        :param alphay: the y deflection map corresponds to data in dataclass
@@ -21,10 +22,18 @@ class LensPreparation(object):
        :param zs:  redshift of the lens
        :param lenseq:
        """
+       alphax_map_hat = -fits.open(xdeflection)[0].data
+       alphay_map_hat = -fits.open(ydeflection)[0].data
+       if lenseq == '1':
+           alphax_map_hat = alphax_map_hat
+           alphay_map_hat = alphay_map_hat
+       elif lenseq == '-1':
+           alphax_map_hat = -alphax_map_hat
+           alphay_map_hat = -alphay_map_hat
        cosmo = LensCosmo(zl, zs)
        dlsds = cosmo.D_ds / cosmo.D_s
-       self.alphax = alphax* dlsds
-       self.alphay = alphay* dlsds
+       self.alphax = alphax_map_hat* dlsds
+       self.alphay = alphay_map_hat* dlsds
 
 
     def initial_kwargs_lens(self,x,y,kwargs_data,alphax_shift=0, alphay_shift=0,lens_model_list=['SHIFT','SHEAR','CONVERGENCE','FLEXIONFG']):
@@ -82,4 +91,109 @@ class LensPreparation(object):
         magnification=np.abs(magnification.mean())
         return kwargs_lens, magnification
 
+
+
+    def kwargs_lens_configuration(self,ximg_list, yimg_list, kwargs_data_joint,
+                                  lens_model_list_in= ['SHIFT','SHEAR','CONVERGENCE','FLEXIONFG']):
+        kwagrs_lens_list = []
+        kwargs_lens_init_list = []
+        betax_list = []  # x_center in the source plane
+        betay_list = []  # y_center in the source plane
+        mag_map_list = []  # magnification
+        lens_model_list = []
+        kwargs_lens_sigma_tmp = []
+        kwargs_fixed_lens_tmp = []
+        kwargs_lower_lens_tmp = []
+        kwargs_upper_lens_tmp = []
+        index_lens_model_list = []
+        for i in range(len(ximg_list)):
+             kwargs_lens, magnification = self.initial_kwargs_lens(
+                        ximg_list[i], yimg_list[i], kwargs_data_joint['multi_band_list'][i][0])
+             kwagrs_lens_list.append(kwargs_lens)
+             thetax, thetay = kwargs_lens[1]['ra_0'], kwargs_lens[1]['dec_0']
+             betax, betay = thetax - kwargs_lens[0]['alpha_x'], thetay - kwargs_lens[0]['alpha_y']
+             betax_list.append(betax)
+             betay_list.append(betay)
+             mag_map_list.append(magnification)
+        if len(ximg_list) > 1:
+            img_index = np.where(mag_map_list == np.min(mag_map_list))[0][0]
+        else:
+            img_index = 0
+        self.img_index = img_index
+        dbetax = betax_list - betax_list[img_index]
+        dbetay = betay_list - betay_list[img_index]
+        for i in range(len(ximg_list)):
+            kwagrs_lens_list[i][0]['alpha_x'] = kwagrs_lens_list[i][0]['alpha_x'] + dbetax[i]
+            kwagrs_lens_list[i][0]['alpha_y'] = kwagrs_lens_list[i][0]['alpha_y'] + dbetay[i]
+            kwargs_lens_init_list += (kwagrs_lens_list[i])
+        deltapix = np.max(kwargs_data_joint['multi_band_list'][0][0]['transform_pix2angle'][0])
+        d_p = 3 * deltapix
+        for i in range(len(ximg_list)):
+            for lens_type in lens_model_list_in:
+                if lens_type == 'SHIFT':
+                    kwargs_lens_sigma_tmp.append({'alpha_x':d_p,'alpha_y':d_p})
+                    if i==img_index:
+                        kwargs_fixed_lens_tmp.append(kwagrs_lens_list[img_index][0])
+                    else:
+                        kwargs_fixed_lens_tmp.append({'alpha_x':kwagrs_lens_list[i][0]['alpha_x'],'alpha_y':kwagrs_lens_list[i][0]['alpha_y']})
+                    kwargs_lower_lens_tmp.append({'alpha_x':kwagrs_lens_list[i][0]['alpha_x']-1,'alpha_y':kwagrs_lens_list[i][0]['alpha_y']-1})
+                    kwargs_upper_lens_tmp.append({'alpha_x':kwagrs_lens_list[i][0]['alpha_x']+1,'alpha_y':kwagrs_lens_list[i][0]['alpha_y']+1})
+                elif lens_type == 'SHEAR':
+                    kwargs_lens_sigma_tmp.append({'e1':0.1,'e2':0.1})
+                    if i==img_index:
+                        kwargs_fixed_lens_tmp.append(kwagrs_lens_list[img_index][1])
+                    else:
+                        kwargs_fixed_lens_tmp.append({'ra_0': kwagrs_lens_list[i][1]['ra_0'], 'dec_0': kwagrs_lens_list[i][1]['dec_0']})
+                    kwargs_lower_lens_tmp.append({'e1':-1,'e2':-1})
+                    kwargs_upper_lens_tmp.append({'e1':1,'e2':1})
+                elif lens_type == 'CONVERGENCE':
+                    kwargs_lens_sigma_tmp.append({'kappa_ext':0.1})
+                    if i==img_index:
+                        kwargs_fixed_lens_tmp.append(kwagrs_lens_list[img_index][2])
+                    else:
+                        kwargs_fixed_lens_tmp.append({'ra_0': kwagrs_lens_list[i][2]['ra_0'],'dec_0': kwagrs_lens_list[i][1]['dec_0']})
+                    kwargs_lower_lens_tmp.append({'kappa_ext':-1})
+                    kwargs_upper_lens_tmp.append({'kappa_ext':1})
+                elif lens_type == 'FLEXIONFG':
+                    kwargs_lens_sigma_tmp.append({'F1':0.01,'F2':0.01,'G1':0.01,'G2':0.01})
+                    kwargs_fixed_lens_tmp.append({'ra_0': kwagrs_lens_list[i][3]['ra_0'],'dec_0': kwagrs_lens_list[i][3]['dec_0'],
+                                         'F1':0,'F2':0,'G1':0,'G2':0})
+                    kwargs_lower_lens_tmp.append({'F1':-1,'F2':-1,'G1':-1,'G2':-1})
+                    kwargs_upper_lens_tmp.append({'F1':1,'F2':1,'G1':1,'G2':1})
+            index_lens_model_list.append([i*4,i*4+1,i*4+2,i*4+3])
+            lens_model_list+=lens_model_list_in
+        kwargs_lens_init=kwargs_lens_init_list
+        kwargs_lens_sigma=kwargs_lens_sigma_tmp
+        kwargs_lower_lens=kwargs_lower_lens_tmp
+        kwargs_upper_lens=kwargs_upper_lens_tmp
+        kwargs_fixed_lens=kwargs_fixed_lens_tmp
+        self.num_img = len(ximg_list)
+        self.betax = betax_list[img_index]
+        self.betay = betay_list[img_index]
+        self.lens_model_list = lens_model_list
+        self.index_lens_model_list = index_lens_model_list
+        self.min_mag = np.abs(np.min(mag_map_list))
+        lens_params= [kwargs_lens_init, kwargs_lens_sigma, kwargs_fixed_lens, kwargs_lower_lens, kwargs_upper_lens]
+        return lens_params
+
+
+    def constrain(self,constrain={}):
+        lens_constrian = constrain
+        return lens_constrian
+
+    def model_index_list(self):
+        lens_model_index_list = {'lens_model_list': self.lens_model_list,'index_lens_model_list': self.index_lens_model_list}
+        return lens_model_index_list
+
+
+    def kwargs_fitting_flexion(self):
+        lens_remove_fixed_list = []
+        for i in range(self.num_img):
+            if i == self.img_index:
+                print "lens model keep fixed in frame:", i + 1
+            else:
+                lens_remove_index = (i + 1) * self.num_img - 1
+                lens_remove_fixed_list.append([lens_remove_index, ['G1', 'G2', 'F1', 'F2'], [0, 0, 0, 0]])
+        kwargs_fit_flexion = ['update_settings', {'lens_remove_fixed': lens_remove_fixed_list}]
+        return kwargs_fit_flexion
 

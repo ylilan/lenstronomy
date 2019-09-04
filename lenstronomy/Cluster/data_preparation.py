@@ -18,22 +18,28 @@ class DataPreparation(object):
     """
     The class contains useful fuctions to do, e.g. cut image, calculate cutsize, make mask of images.....
     """
-    def __init__(self, data, deltaPix, snr=3.0, npixels=20,exp_time=None,background_rms=None,
+    def __init__(self, data, snr=3.0, npixels=20,deltaPix=None, exp_time=None,background_rms=None,
                  background=None, kernel = None, interaction = True):
         """
 
-        :param hdul: fits format, image fits file.
-        :param deltaPix: float, pixel size
-        :param snr: float, signal-to-noise value
-        :param npixels: int, number of connected pixels that can be detected as a source
-        :param exp_time: float, exposure time of the fits files
+        :param data: fits format, image fits file.
+        :param snr: float, signal-to-noise value.
+        :param npixels: int, number of connected pixels that can be detected as a source.
+        :param deltaPix: float, pixel size of the fits files.
+        :param exp_time:  float, exposure time of the fits files.
         :param background_rms: float,float or array_like, the gaussian 1-sigma background noise in data.
-        :param background: float or 2D array,background value of the input image.
+        :param background:  float or 2D array,background value of the input image.
         :param kernel: The 2D array, filter the image before thresholding.
-        :param interaction:
+        :param interaction: bool, default is True.
         """
+
         self.hdul = fits.open(data)
-        self.deltaPix = deltaPix
+        self.wcs = wcs.WCS(self.hdul[0].header)
+        if deltaPix is None:
+            self.deltaPix= round((self.wcs.wcs_pix2world([[0, 100]], 1)[0][1]
+                                  - self.wcs.wcs_pix2world([[0, 0]], 1)[0][1]) * 3600 * 0.01, 2)
+        else:
+            self.deltaPix = deltaPix
         self.snr = snr
         self.npixels = npixels
         if exp_time is None:
@@ -55,9 +61,9 @@ class DataPreparation(object):
         :param dec: dec in deg
         :return:
         """
-        w = wcs.WCS(self.hdul[0].header)  # get world2pix information from header
-        y_detector= np.int(w.wcs_world2pix([[ra, dec]], 1)[0][0])
-        x_detector = (np.int(w.wcs_world2pix([[ra, dec]], 1)[0][1]))
+          # get world2pix information from header
+        y_detector= np.int(self.wcs.wcs_world2pix([[ra, dec]], 1)[0][0])
+        x_detector = (np.int(self.wcs.wcs_world2pix([[ra, dec]], 1)[0][1]))
 
         return x_detector, y_detector
 
@@ -70,11 +76,7 @@ class DataPreparation(object):
          :param image: parent image
          :return: cutted image
          """
-        if image is None:
-            image = self.image
-        else:
-            image = image
-        image_cutted = image[x - r_cut:x + r_cut + 1, y - r_cut:y + r_cut + 1]
+        image_cutted = self.image[x - r_cut:x + r_cut + 1, y - r_cut:y + r_cut + 1]
         return image_cutted
 
     def _seg_image(self, x, y, r_cut=100):
@@ -93,7 +95,7 @@ class DataPreparation(object):
         bakground = self.bakground
         error = self.background_rms
         kernel = self.kernel
-        image_cutted = self.image[x - r_cut:x + r_cut + 1, y - r_cut:y + r_cut + 1]
+        image_cutted = self.cut_image(x,y,r_cut)
         image_data = image_cutted
         threshold_detect_objs=detect_threshold(data=image_data, snr=snr,background=bakground,error=error)
         segments=detect_sources(image_data, threshold_detect_objs, npixels=npixels, filter_kernel=kernel)
@@ -150,6 +152,10 @@ class DataPreparation(object):
                 cutsize_data=cutsize_data
             else:
                 raise ValueError("Please input 'y' or 'n' !")
+     else:
+         _, center_mask_info, _ = self._seg_image(x, y, r_cut=r_cut)
+         _, r_center, _, _, _ = center_mask_info
+         cutsize_data =  r_center + 10
      return cutsize_data
 
 
@@ -200,10 +206,11 @@ class DataPreparation(object):
        kwargs_data['ra_at_xy_0'] = ra_at_xy_0
        kwargs_data['dec_at_xy_0'] = dec_at_xy_0
        kwargs_data['image_data'] = picked_data
-       return kwargs_data
+       kwargs_seg = [segments_deblend_list, xcenter, ycenter, c_index]
+       return kwargs_data, kwargs_seg
 
 
-    def pick_psf(self, x, y, r_cut, pixel_size=None, kernel_size=None):
+    def pick_psf(self, ra, dec, r_cut, pixel_size=None, kernel_size=None):
         """
         select psf
         :param x:  x coordinate.
@@ -213,7 +220,8 @@ class DataPreparation(object):
         :param kernel_size: kernel size of the psf.
         :return: kwargs_psf
         """
-        image_psf = self.cut_image(x, y, r_cut)
+        x_psf, y_psf = self.radec2detector(ra, dec)
+        image_psf = self.cut_image(x_psf, y_psf, r_cut)
         if kernel_size is None:
             kernel_size = np.shape(image_psf)[0]
         image_psf_cut = kernel_util.cut_psf(image_psf, psf_size=kernel_size)
@@ -226,27 +234,43 @@ class DataPreparation(object):
 
 
 
-    def plot_data_assemble(self,add_mask=5):
+    def kwargs_data_psf(self, ra, dec, ra_psf, dec_psf, r_cut=100, add_mask=5, multi_band_type='joint-linear',img_name='datapreparation',cutout_text='lensed image'):
         """
 
+        :param ra:
+        :param dec:
+        :param ra_psf:
+        :param dec_psf:
+        :param r_cut:
         :param add_mask:
+        :param multi_band_type:
         :return:
         """
+        kwargs_numerics = self.numerics()
+        multi_band_list =[]
+        x_detector = []
+        y_detector = []
+        kwargs_data_list = []
+        kwargs_psf_list = []
+        for i in range(len(ra)):
+            xy = self.radec2detector(ra[i], dec[i])
+            cutsize = self.cutsize(xy[0], xy[1], r_cut=r_cut)
+            kwargs_data, kwargs_seg = self.data_assemble(x=xy[0], y=xy[1],r_cut=cutsize, add_mask=add_mask)
+            kwargs_psf = self.pick_psf(ra = ra_psf, dec = dec_psf, r_cut=cutsize)
+            kwargs_psf_list.append(kwargs_psf)
+            kwargs_data_list.append(kwargs_data)
+            x_detector.append(xy[0])
+            y_detector.append(xy[1])
+            multi_band_list.append([kwargs_data, kwargs_psf, kwargs_numerics])
+            self.plot_data_assemble(kwargs_seg=kwargs_seg, add_mask=add_mask,img_name=img_name+repr(i+1)+'.pdf',cutout_text=cutout_text+repr(i+1))
+        kwargs_data_joint = {'multi_band_list': multi_band_list, 'multi_band_type': multi_band_type}
+        return x_detector,y_detector,kwargs_data_joint
 
-        mask = self.data_mask
-        image = self.raw_image
-        picked_data = self.data
-        selem = np.ones((add_mask, add_mask))
-        img_mask = ndimage.binary_dilation(mask.astype(np.bool), selem)
-        fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(16, 10))
-        ax1.imshow(image, origin='lower', cmap="gist_heat")
-        ax1.set_title('Input Image')
-        ax2.imshow(img_mask+mask, origin='lower',cmap="gist_heat")
-        ax2.set_title('Selected pixels')
-        ax3.imshow(picked_data, origin='lower',cmap="gist_heat")
-        ax3.set_title('Data')
-        plt.show()
-        return 0
+    def numerics(self):
+        kwargs_numerics={'supersampling_factor': 1, 'supersampling_convolution': False}
+        return kwargs_numerics
+
+
 
 
 
@@ -273,19 +297,37 @@ class DataPreparation(object):
         return 0
 
 
-    def kwargs_data_psf(self,ra,dec,r_cut,x_psf,y_psf,add_mask):
-        ximg_list = []
-        yimg_list = []
-        kwargs_data_list = []
-        kwargs_psf_list = []
-        for i in range(len(ra)):
-            xy = self.radec2detector(ra[i], dec[i])
-            cutsize = self.cutsize(xy[0], xy[1], r_cut=r_cut)
-            kwargs_data = self.data_assemble(x=xy[0], y=xy[1], r_cut=cutsize,add_mask=add_mask)
-            kwargs_psf = self.pick_psf(x=x_psf, y=y_psf, r_cut=cutsize)
-            kwargs_psf_list.append(kwargs_psf)
-            kwargs_data_list.append(kwargs_data)
-            ximg_list.append(xy[0])
-            yimg_list.append(xy[1])
-            self.plot_data_assemble(add_mask=add_mask)
-        return ximg_list,yimg_list,kwargs_data_list,kwargs_psf_list
+
+
+    def plot_data_assemble(self,kwargs_seg,add_mask=5,img_name='datapreparation.pdf',cutout_text='lensed image'):
+        """
+
+        :param add_mask:
+        :return:
+        """
+        mask = self.data_mask
+        image = self.raw_image
+        picked_data = self.data
+        selem = np.ones((add_mask, add_mask))
+        img_mask = ndimage.binary_dilation(mask.astype(np.bool), selem)
+        fig, (ax1, ax2, ax3,ax4) = plt.subplots(1, 4, figsize=(16, 10))
+        ax1.imshow(image, origin='lower', cmap="gist_heat")
+        ax1.set_title('Cutout Image')
+        ax1.text(image.shape[0] * 0.4, image.shape[0] * 0.05, cutout_text,size=12, color='white')
+        segments_deblend_list, xcenter, ycenter, c_index=kwargs_seg
+        ax2.imshow(segments_deblend_list, origin='lower')
+        for i in range(len(xcenter)):
+            ax2.text(xcenter[i] * 1.1, ycenter[i], 'Seg' + repr(i), color='w')
+        ax2.text(image.shape[0] * 0.5, image.shape[0] * 0.05, 'Seg ' + repr(c_index) + ' ' + 'in center',
+                 size=12, color='white')
+        ax2.set_title('Segmentations (S/N >' + repr(self.snr) + ')')
+        ax3.imshow(img_mask+mask, origin='lower',cmap="gist_heat")
+        ax3.set_title('Selected pixels')
+        ax3.text(image.shape[0] * 0.4, image.shape[0] * 0.05, 'pixels S/N >' + repr(self.snr) + ')',size=12, color='white')
+        ax3.text(image.shape[0] * 0.4, image.shape[0] * 0.9, 'additional pixels', size=12, color='r')
+        ax4.imshow(picked_data, origin='lower',cmap="gist_heat")
+        ax4.set_title('Data')
+        plt.show()
+        fig.savefig(img_name)
+        return 0
+
