@@ -46,11 +46,11 @@ class LensPreparation(object):
         """
         imageData = ImageData(**kwargs_data)
         r_cut = (np.shape(imageData.data)[0] - 1) / 2
-        alphax = self.alphax[x - r_cut:x + r_cut + 1, y - r_cut:y + r_cut + 1]
-        alphay = self.alphay[x - r_cut:x + r_cut + 1, y - r_cut:y + r_cut + 1]
+        alphax = self.alphax[int(x - r_cut):int(x + r_cut + 1), int(y - r_cut):int(y + r_cut + 1)]
+        alphay = self.alphay[int(x - r_cut):int(x + r_cut + 1), int(y - r_cut):int(y + r_cut + 1)]
         xaxes, yaxes = imageData.pixel_coordinates
-        ra_center = xaxes[r_cut + 1, r_cut + 1]
-        dec_center = yaxes[r_cut + 1, r_cut + 1]
+        ra_center = xaxes[int(r_cut + 1), int(r_cut + 1)]
+        dec_center = yaxes[int(r_cut + 1), int(r_cut + 1)]
         kwargs_lens_in = [{'grid_interp_x': xaxes[0], 'grid_interp_y': yaxes[:, 0], 'f_x': alphax,
                            'f_y': alphay}]
 
@@ -59,8 +59,8 @@ class LensPreparation(object):
             if lens_type=='INTERPOL':
                 kwargs_lens.append({'grid_interp_x': xaxes[0], 'grid_interp_y': yaxes[:,0], 'f_x': alphax, 'f_y': alphay})
             elif lens_type=='SHIFT':
-                alpha_x_center = alphax[r_cut + 1, r_cut + 1]
-                alpha_y_center = alphay[r_cut + 1, r_cut + 1]
+                alpha_x_center = alphax[int(r_cut + 1), int(r_cut + 1)]
+                alpha_y_center = alphay[int(r_cut + 1), int(r_cut + 1)]
                 kwargs_lens.append({'alpha_x': alpha_x_center - alphax_shift, 'alpha_y': alpha_y_center - alphay_shift})
             elif lens_type == 'SHEAR':
                 gamma1, gamma2 = NumericLens(['INTERPOL']).gamma(util.image2array(xaxes),
@@ -90,6 +90,9 @@ class LensPreparation(object):
                                                                  util.image2array(yaxes), kwargs=kwargs_lens_in)
         magnification=np.abs(magnification.mean())
         return kwargs_lens, magnification
+
+
+
 
 
 
