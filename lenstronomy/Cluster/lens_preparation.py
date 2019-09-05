@@ -98,6 +98,7 @@ class LensPreparation(object):
 
     def kwargs_lens_configuration(self,ximg_list, yimg_list, kwargs_data_joint,
                                   lens_model_list_in= ['SHIFT','SHEAR','CONVERGENCE','FLEXIONFG']):
+        self.lens_model_list_in = lens_model_list_in
         kwagrs_lens_list = []
         kwargs_lens_init_list = []
         betax_list = []  # x_center in the source plane
@@ -189,14 +190,25 @@ class LensPreparation(object):
         return lens_model_index_list
 
 
-    def kwargs_fitting_flexion(self):
+    def kwargs_flexion(self,bic_noflexion=1, bic_flexion=0):
+        num_lens_model_list_in = len(self.lens_model_list_in)
         lens_remove_fixed_list = []
+        lens_add_fixed_list = []
         for i in range(self.num_img):
             if i == self.img_index:
                 print "lens model keep fixed in frame:", i + 1
             else:
-                lens_remove_index = (i + 1) * self.num_img - 1
+                lens_remove_index = (i + 1) * num_lens_model_list_in - 1
                 lens_remove_fixed_list.append([lens_remove_index, ['G1', 'G2', 'F1', 'F2'], [0, 0, 0, 0]])
-        kwargs_fit_flexion = ['update_settings', {'lens_remove_fixed': lens_remove_fixed_list}]
-        return kwargs_fit_flexion
+                lens_add_fixed_list.append([lens_remove_index, ['G1', 'G2', 'F1', 'F2'], [0, 0, 0, 0]])
+        flexion_remove_fixed = ['update_settings', {'lens_remove_fixed': lens_remove_fixed_list}]
+        flexion_add_fixed = ['update_settings', {'lens_add_fixed': lens_add_fixed_list}]
+        if bic_flexion > bic_noflexion:
+            kwargs_fitting_flexion = flexion_add_fixed
+            print ("no need to add flexion")
+        else:
+            kwargs_fitting_flexion = flexion_remove_fixed
+        return kwargs_fitting_flexion
+
+
 

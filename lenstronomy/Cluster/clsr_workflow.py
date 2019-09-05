@@ -43,7 +43,7 @@ class ClsrWorkflow(object):
         bic_model = self.fitting_seq_src.bic
         return bic_model,chain_list, kwargs_result
 
-    def update_fit_sequence(self,kwargs_result):
+    def update_kwargs(self,kwargs_result):
         """
 
         :param kwargs_result: fitting results of a specific state
@@ -51,6 +51,10 @@ class ClsrWorkflow(object):
         """
         self.fitting_seq_src.update_state(kwargs_result)
 
+    def update_flexion(self, flexion_add_fixed,kwargs_result,bic_flexion = 0, bic_noflexion = 1):
+        if bic_flexion > bic_noflexion:
+            self.run_fit_sequence([flexion_add_fixed])
+            self.update_kwargs(kwargs_result)
 
 
     def lowest_bic(self,n_max_range, n_particles,n_iterations,sigma_scale,rh, bic_model_in=[100000]):
@@ -122,17 +126,17 @@ class ClsrWorkflow(object):
         if not samples_mcmc == []:
           corner.corner(samples_mcmc, labels=param_mcmc, show_titles=True)
 
-    def plot_modeling(self,kwargs_result,multi_band_type='joint-linear', img_name='sys'):
+    def plot_modeling(self,kwargs_result,multi_band_type='joint-linear', img_name='sys',text='sys'):
         model_plot = ModelPlot(self.multi_band_list, self.kwargs_model, kwargs_result, arrow_size=0.02, cmap_string="gist_heat",
                  multi_band_type=multi_band_type)
         for band_index in range(len(self.kwargs_data_joint['multi_band_list'])):
-            f, axes = plt.subplots(1, 4, figsize=(20, 9))
-            model_plot.data_plot(ax=axes[0], band_index=band_index)
+            f, axes = plt.subplots(1, 4, figsize=(25, 10))
+            model_plot.data_plot(ax=axes[0], band_index=band_index, text='Observed'+text+ repr(band_index+1))
             model_plot.model_plot(ax=axes[1], image_names=True, band_index=band_index)
             model_plot.normalized_residual_plot(ax=axes[2], v_min=-6, v_max=6, band_index=band_index)
-            model_plot.source_plot(ax=axes[3],deltaPix_source=0.01, numPix=100,band_index=band_index, scale_size =1.0)
+            model_plot.source_plot(ax=axes[3],deltaPix_source=0.01, numPix=100,band_index=band_index, scale_size =0.5)
             f.show()
-            f.savefig(img_name+'source'+repr(band_index)+'.pdf')
+            f.savefig(img_name+'source'+repr(band_index+1)+'.pdf')
 
 
     def source_flux_rh(self,samples_mcmc):
