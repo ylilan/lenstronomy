@@ -1,9 +1,22 @@
 
 class SourcePreparation(object):
-    def __init__(self,source_model_list=['SERSIC_ELLIPSE','SHAPELETS']):
-       self.source_model_list = source_model_list
+    """
 
-    def params(self,betax,betay, deltaPix):
+    """
+    def __init__(self,source_model_list=['SERSIC_ELLIPSE','SHAPELETS']):
+        """
+        :param source_model_list:
+        """
+        self.source_model_list = source_model_list
+
+    def params(self,betax,betay, deltaPix, source_params = None):
+        """
+
+        :param betax:
+        :param betay:
+        :param deltaPix:
+        :return:
+        """
         kwargs_source_init = []
         kwargs_source_sigma = []
         kwargs_lower_source = []
@@ -29,9 +42,12 @@ class SourcePreparation(object):
                                             'center_x': betax - 1, 'center_y': betay - 1})
                 kwargs_upper_source.append({'beta': 100, 'center_x':betax + 1,'center_y': betay + 1})
                 kwargs_fixed_source.append({'n_max': -1, 'beta':deltaPix })
-        source_params = [kwargs_source_init, kwargs_source_sigma, kwargs_fixed_source, kwargs_lower_source,
+        if source_params is None:
+            sourceparams = [kwargs_source_init, kwargs_source_sigma, kwargs_fixed_source, kwargs_lower_source,
                          kwargs_upper_source]
-        return source_params
+        else:
+            sourceparams = source_params
+        return sourceparams
 
     def constrain(self):
         source_constrain ={'joint_source_with_source': [[0, 1, ['center_x', 'center_y']]]}

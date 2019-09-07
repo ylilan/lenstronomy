@@ -141,16 +141,20 @@ class DataPreparation(object):
      """
      cutsize_data = r_cut
      if self.interaction:
+         yn = True
+         while(yn):
             m_image = self.cut_image(x, y, r_cut)
             fig_ci=plt.figure()
             plt.imshow(m_image, origin='lower',cmap="gist_heat")
-            plt.title('Good framesize? ('+repr(cutsize_data*2+1)+'x'+repr(cutsize_data*2+1)+' pixels^2' + ')')
+            plt.title('Good frame size? ('+repr(cutsize_data*2+1)+'x'+repr(cutsize_data*2+1)+' pixels^2' + ')')
             plt.show(fig_ci)
-            cutyn = raw_input('Hint: appropriate framesize? (y/n): ')
+            cutyn = raw_input('Hint: appropriate frame size? (y/n): ')
             if cutyn == 'n':
-                cutsize_ = np.int(raw_input('Hint: please tell me an appropriate cutsize (framesize=2*cutsize+1)? (int format): '))
+                cutsize_ = np.int(raw_input('Hint: input an appropriate cutsize (int format)?  (framesize=2*cutsize+1): '))
                 cutsize_data = cutsize_
+                r_cut = cutsize_
             elif cutyn == 'y':
+                yn = False
                 cutsize_data=cutsize_data
             else:
                 raise ValueError("Please input 'y' or 'n' !")
@@ -178,7 +182,7 @@ class DataPreparation(object):
        self.raw_image = image
        if self.interaction:
             self.plot_segmentation(image, segments_deblend_list, xcenter, ycenter, c_index)
-            source_mask_index = input('Input segmentation index, e.g.,[0,1]. (list format)=')
+            source_mask_index = input('Hint: input segmentation index (list format), e.g.,[0,1]. =')
             src_mask = np.zeros_like(image)
             for i in source_mask_index:
                 src_mask = src_mask + obj_masks[i]
@@ -256,7 +260,9 @@ class DataPreparation(object):
         kwargs_psf_list = []
         for i in range(len(ra)):
             xy = self.radec2detector(ra[i], dec[i])
+            print ("======lensed image "+repr(i+1)+", cutout frame size======")
             cutsize = self.cutsize(xy[0], xy[1], r_cut=r_cut)
+            print("======lensed image " + repr(i + 1) + ", segmentations selection======")
             kwargs_data, kwargs_seg = self.data_assemble(x=xy[0], y=xy[1],r_cut=cutsize, add_mask=add_mask)
             kwargs_psf = self.pick_psf(ra = ra_psf, dec = dec_psf, r_cut=cutsize)
             kwargs_psf_list.append(kwargs_psf)
@@ -264,6 +270,7 @@ class DataPreparation(object):
             x_detector.append(xy[0])
             y_detector.append(xy[1])
             multi_band_list.append([kwargs_data, kwargs_psf, kwargs_numerics])
+            print("======lensed image " + repr(i + 1) + ", assembled data======")
             self.plot_data_assemble(kwargs_seg=kwargs_seg, add_mask=add_mask,img_name=img_name+repr(i+1)+'.pdf',cutout_text=cutout_text+repr(i+1))
         kwargs_data_joint = {'multi_band_list': multi_band_list, 'multi_band_type': multi_band_type}
         return x_detector,y_detector,kwargs_data_joint
