@@ -126,15 +126,15 @@ class ClsrWorkflow(object):
         if not samples_mcmc == []:
           corner.corner(samples_mcmc, labels=param_mcmc, show_titles=True)
 
-    def plot_modeling(self,kwargs_result,multi_band_type='joint-linear', img_name='sys',text='sys'):
+    def plot_modeling(self,kwargs_result,font_size=25,multi_band_type='joint-linear', img_name='sys',text='sys'):
         model_plot = ModelPlot(self.multi_band_list, self.kwargs_model, kwargs_result, arrow_size=0.02, cmap_string="gist_heat",
                  multi_band_type=multi_band_type)
         for band_index in range(len(self.kwargs_data_joint['multi_band_list'])):
             f, axes = plt.subplots(1, 4, figsize=(25, 10))
-            model_plot.data_plot(ax=axes[0], band_index=band_index, text='Observed'+text+ repr(band_index+1))
-            model_plot.model_plot(ax=axes[1], image_names=True, band_index=band_index)
-            model_plot.normalized_residual_plot(ax=axes[2], v_min=-6, v_max=6, band_index=band_index)
-            model_plot.source_plot(ax=axes[3],deltaPix_source=0.01, numPix=100,band_index=band_index, scale_size =0.5)
+            model_plot.data_plot(ax=axes[0], band_index=band_index, text='Observed'+text+ repr(band_index+1),font_size = font_size)
+            model_plot.model_plot(ax=axes[1], image_names=True, band_index=band_index,font_size = font_size)
+            model_plot.normalized_residual_plot(ax=axes[2], v_min=-6, v_max=6, band_index=band_index,font_size = font_size)
+            model_plot.source_plot(ax=axes[3],deltaPix_source=0.01, numPix=100,band_index=band_index, scale_size =0.5,font_size = font_size)
             f.show()
             f.savefig(img_name+'source'+repr(band_index+1)+'.pdf')
 

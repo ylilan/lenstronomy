@@ -130,7 +130,7 @@ class DataPreparation(object):
         return obj_masks, center_mask_info, segments_deblend
 
 
-    def cutsize(self,x,y,r_cut=100):
+    def cutsize(self,x,y,r_cut=100,font_size=15):
      """
 
      :param x: x coordinate
@@ -146,7 +146,7 @@ class DataPreparation(object):
             m_image = self.cut_image(x, y, r_cut)
             fig_ci=plt.figure()
             plt.imshow(m_image, origin='lower',cmap="gist_heat")
-            plt.title('Good frame size? ('+repr(cutsize_data*2+1)+'x'+repr(cutsize_data*2+1)+' pixels^2' + ')')
+            plt.title('Good frame size? ('+repr(cutsize_data*2+1)+'x'+repr(cutsize_data*2+1)+' pixels^2' + ')',fontsize=font_size)
             plt.show(fig_ci)
             cutyn = raw_input('Hint: appropriate frame size? (y/n): ')
             if cutyn == 'n':
@@ -283,7 +283,7 @@ class DataPreparation(object):
 
 
 
-    def plot_segmentation(self,image_data,segments_deblend,xcenter,ycenter,c_index):
+    def plot_segmentation(self,image_data,segments_deblend,xcenter,ycenter,c_index,font_size=15):
         """
         show segmentation map of image_data
         :param image_data:
@@ -296,19 +296,19 @@ class DataPreparation(object):
         """
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(9, 6))
         ax1.imshow(image_data, origin='lower',cmap="gist_heat")
-        ax1.set_title('Input Image')
+        ax1.set_title('Input Image',fontsize =font_size )
         ax2.imshow(segments_deblend, origin='lower')
         for i in range(len(xcenter)):
             ax2.text(xcenter[i]*1.1, ycenter[i], 'Seg'+repr(i), color='w')
         ax2.text(image_data.shape[0]*0.5,image_data.shape[0]*0.1,'Seg '+repr(c_index)+' '+'in center',size=12,color='white')
-        ax2.set_title('Segmentations (S/N >'+repr(self.snr)+')')
+        ax2.set_title('Segmentations (S/N >'+repr(self.snr)+')',fontsize =font_size)
         plt.show()
         return 0
 
 
 
 
-    def plot_data_assemble(self,kwargs_seg,add_mask=5,img_name='datapreparation.pdf',cutout_text='lensed image'):
+    def plot_data_assemble(self,kwargs_seg,add_mask=5,img_name='datapreparation.pdf',cutout_text='lensed image',font_size=15):
         """
 
         :param add_mask:
@@ -321,21 +321,25 @@ class DataPreparation(object):
         img_mask = ndimage.binary_dilation(mask.astype(np.bool), selem)
         fig, (ax1, ax2, ax3,ax4) = plt.subplots(1, 4, figsize=(16, 10))
         ax1.imshow(image, origin='lower', cmap="gist_heat")
-        ax1.set_title('Cutout Image')
+        ax1.set_title('Cutout Image',fontsize =font_size)
         ax1.text(image.shape[0] * 0.4, image.shape[0] * 0.05, cutout_text,size=12, color='white')
+        ax1.axis('off')
         segments_deblend_list, xcenter, ycenter, c_index=kwargs_seg
         ax2.imshow(segments_deblend_list, origin='lower')
         for i in range(len(xcenter)):
             ax2.text(xcenter[i] * 1.1, ycenter[i], 'Seg' + repr(i), color='w')
         ax2.text(image.shape[0] * 0.5, image.shape[0] * 0.05, 'Seg ' + repr(c_index) + ' ' + 'in center',
                  size=12, color='white')
-        ax2.set_title('Segmentations (S/N >' + repr(self.snr) + ')')
+        ax2.set_title('Segmentations (S/N >' + repr(self.snr) + ')',fontsize =font_size)
+        ax2.axis('off')
         ax3.imshow(img_mask+mask, origin='lower',cmap="gist_heat")
-        ax3.set_title('Selected pixels')
+        ax3.set_title('Selected pixels',fontsize =font_size)
         ax3.text(image.shape[0] * 0.4, image.shape[0] * 0.05, 'pixels S/N >' + repr(self.snr) + ')',size=12, color='white')
         ax3.text(image.shape[0] * 0.4, image.shape[0] * 0.9, 'additional pixels', size=12, color='r')
+        ax3.axis('off')
         ax4.imshow(picked_data, origin='lower',cmap="gist_heat")
-        ax4.set_title('Data')
+        ax4.set_title('Data',fontsize =font_size)
+        ax4.axis('off')
         plt.show()
         fig.savefig(img_name)
         return 0
