@@ -5,16 +5,19 @@ class SourcePreparation(object):
     """
     def __init__(self,source_model_list=['SERSIC_ELLIPSE','SHAPELETS']):
         """
-        :param source_model_list:
+        :param source_model_list: list of strings, name of lightmodel profiles.
         """
         self.source_model_list = source_model_list
 
-    def params(self,betax,betay, deltaPix, source_params = None):
+    def params(self,betax, betay, deltaPix, source_params = None):
         """
-
-        :param betax:
-        :param betay:
-        :param deltaPix:
+        source parameters configuration in lenstronomy keywords arguments.
+        :param betax: centerx in source plane
+        :param betay:  centery in source plane
+        :param deltaPix: pixel scale in image plane
+        :param source_params: list of source parameters configuration,
+        [kwargs_source_init, kwargs_source_sigma, kwargs_fixed_source, kwargs_lower_source,
+                         kwargs_upper_source]
         :return:
         """
         kwargs_source_init = []
@@ -50,10 +53,19 @@ class SourcePreparation(object):
         return sourceparams
 
     def constrain(self, source_constrain=None):
+        """
+        :param source_constrain: dict, fitting constrains of source light models
+        :return: fitting constrains of source light models
+        """
         if source_constrain is None:
             source_constrain ={'joint_source_with_source': [[0, 1, ['center_x', 'center_y']]]}
         return source_constrain
 
+
+    @property
     def model_list(self):
+        """
+        :return: source model list
+        """
         source_model_list ={'source_light_model_list': self.source_model_list}
         return source_model_list
