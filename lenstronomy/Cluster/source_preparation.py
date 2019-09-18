@@ -1,7 +1,8 @@
 
 class SourcePreparation(object):
     """
-
+     This class is used to do initialize kwargs of the source light models,
+     the default light models are ['SERSIC_ELLIPSE','SHAPELETS'].
     """
     def __init__(self,source_model_list=['SERSIC_ELLIPSE','SHAPELETS']):
         """
@@ -60,7 +61,6 @@ class SourcePreparation(object):
         if source_constrain is None:
             source_constrain ={'joint_source_with_source': [[0, 1, ['center_x', 'center_y']]]}
         return source_constrain
-
 
     @property
     def model_list(self):
