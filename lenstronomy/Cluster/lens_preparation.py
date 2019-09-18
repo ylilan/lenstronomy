@@ -36,7 +36,7 @@ class LensPreparation(object):
        self.alphay = alphay_map_hat* dlsds
 
 
-    def initial_kwargs_lens(self,x,y,kwargs_data,alphax_shift=0, alphay_shift=0,lens_model_list=['SHIFT','SHEAR','CONVERGENCE','FLEXIONFG']):
+    def initial_kwargs_lens(self,x,y,kwargs_data,alphax_shift=0, alphay_shift=0, diff= 0.01, lens_model_list=['SHIFT','SHEAR','CONVERGENCE','FLEXIONFG']):
         """
         This function returns list type of kwargs of lens models.
         :param lens_model_list: list of strings with lens model names
@@ -64,22 +64,33 @@ class LensPreparation(object):
                 kwargs_lens.append({'alpha_x': alpha_x_center - alphax_shift, 'alpha_y': alpha_y_center - alphay_shift})
             elif lens_type == 'SHEAR':
                 gamma1, gamma2 = NumericLens(['INTERPOL']).gamma(util.image2array(xaxes),
-                                                                 util.image2array(yaxes), kwargs=kwargs_lens_in)
+                                                                 util.image2array(yaxes), kwargs=kwargs_lens_in,diff = diff)
                 gamma_1_center, gamma_2_center = gamma1.mean(), gamma2.mean()
                 kwargs_lens.append({'e1': gamma_1_center, 'e2': gamma_2_center, 'ra_0': ra_center, 'dec_0': dec_center})
+                self.gamma1 = gamma1
+                self.gamma2 = gamma2
             elif lens_type == 'CONVERGENCE':
                 kappa = NumericLens(['INTERPOL']).kappa(util.image2array(xaxes),
-                                                        util.image2array(yaxes), kwargs=kwargs_lens_in)
+                                                        util.image2array(yaxes), kwargs=kwargs_lens_in, diff = diff)
                 kappa_center = kappa.mean()
                 kwargs_lens.append({'kappa_ext': kappa_center, 'ra_0': ra_center, 'dec_0': dec_center})
+                self.kappa = kappa
             elif lens_type == 'FLEXION':
                 g1, g2, g3, g4 = NumericLens(['INTERPOL']).flexion(util.image2array(xaxes),
-                                                                   util.image2array(yaxes), kwargs=kwargs_lens_in)
+                                                                   util.image2array(yaxes), kwargs=kwargs_lens_in, diff = diff)
+                self.g1 = g1
+                self.g2 = g2
+                self.g3 = g3
+                self.g4 = g4
                 g1_c, g2_c, g3_c, g4_c = g1.mean(), g2.mean(), g3.mean(), g4.mean()
                 kwargs_lens.append({'g1': g1_c,'g2':g2_c,'g3':g3_c,'g4':g4_c, 'ra_0': ra_center, 'dec_0': dec_center})
             elif lens_type == 'FLEXIONFG':
                 g1, g2, g3, g4 = NumericLens(['INTERPOL']).flexion(util.image2array(xaxes),
-                                                                   util.image2array(yaxes), kwargs=kwargs_lens_in)
+                                                                   util.image2array(yaxes), kwargs=kwargs_lens_in, diff = diff)
+                self.F1 = (g1 + g3) * 0.5
+                self.F2 = (g2 + g4) * 0.5
+                self.G1 = (g1 - g3) * 0.5 - g3
+                self.G2 = (g2 - g4) * 0.5 - g4
                 g1_c, g2_c, g3_c, g4_c = g1.mean(), g2.mean(), g3.mean(), g4.mean()
                 F1_c = (g1_c + g3_c) * 0.5
                 F2_c = (g2_c + g4_c) * 0.5
@@ -97,7 +108,7 @@ class LensPreparation(object):
 
 
     def kwargs_lens_configuration(self,ximg_list, yimg_list, kwargs_data_joint,
-                                  lens_model_list_in= ['SHIFT','SHEAR','CONVERGENCE','FLEXIONFG']):
+                                  lens_model_list_in= ['SHIFT','SHEAR','CONVERGENCE','FLEXIONFG'], diff = 0.01):
         self.lens_model_list_in = lens_model_list_in
         kwagrs_lens_list = []
         kwargs_lens_init_list = []
@@ -112,13 +123,14 @@ class LensPreparation(object):
         index_lens_model_list = []
         for i in range(len(ximg_list)):
              kwargs_lens, magnification = self.initial_kwargs_lens(
-                        ximg_list[i], yimg_list[i], kwargs_data_joint['multi_band_list'][i][0])
+                        ximg_list[i], yimg_list[i], kwargs_data_joint['multi_band_list'][i][0], diff=diff)
              kwagrs_lens_list.append(kwargs_lens)
              thetax, thetay = kwargs_lens[1]['ra_0'], kwargs_lens[1]['dec_0']
              betax, betay = thetax - kwargs_lens[0]['alpha_x'], thetay - kwargs_lens[0]['alpha_y']
              betax_list.append(betax)
              betay_list.append(betay)
              mag_map_list.append(magnification)
+        self.magnification =  mag_map_list
         if len(ximg_list) > 1:
             img_index = np.where(mag_map_list == np.min(mag_map_list))[0][0]
         else:
