@@ -49,8 +49,9 @@ class SourcePreparation(object):
             sourceparams = source_params
         return sourceparams
 
-    def constrain(self):
-        source_constrain ={'joint_source_with_source': [[0, 1, ['center_x', 'center_y']]]}
+    def constrain(self, source_constrain=None):
+        if source_constrain is None:
+            source_constrain ={'joint_source_with_source': [[0, 1, ['center_x', 'center_y']]]}
         return source_constrain
 
     def model_list(self):
