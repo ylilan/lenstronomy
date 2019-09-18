@@ -2,7 +2,7 @@
 class SourcePreparation(object):
     """
      This class is used to do initialize kwargs of the source light models,
-     the default light models are ['SERSIC_ELLIPSE','SHAPELETS'].
+     the default light models are sersic and shapelets, ['SERSIC_ELLIPSE','SHAPELETS'].
     """
     def __init__(self,source_model_list=['SERSIC_ELLIPSE','SHAPELETS']):
         """
