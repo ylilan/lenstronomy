@@ -130,7 +130,7 @@ class DataPreparation(object):
         return obj_masks, center_mask_info, segments_deblend
 
 
-    def cutsize(self,x,y,r_cut=100,font_size=15):
+    def cutsize(self,x,y,r_cut=100,font_size=20):
      """
 
      :param x: x coordinate
@@ -216,7 +216,7 @@ class DataPreparation(object):
        return kwargs_data, kwargs_seg
 
 
-    def pick_psf(self, ra, dec, r_cut, pixel_size=None, kernel_size=None):
+    def pick_psf(self, ra, dec, r_cut=15, pixel_size=None, kernel_size=None):
         """
         select psf
         :param x:  x coordinate.
@@ -264,7 +264,7 @@ class DataPreparation(object):
             cutsize = self.cutsize(xy[0], xy[1], r_cut=r_cut)
             print("======lensed image " + repr(i + 1) + ", segmentations selection======")
             kwargs_data, kwargs_seg = self.data_assemble(x=xy[0], y=xy[1],r_cut=cutsize, add_mask=add_mask)
-            kwargs_psf = self.pick_psf(ra = ra_psf, dec = dec_psf, r_cut=cutsize)
+            kwargs_psf = self.pick_psf(ra = ra_psf, dec = dec_psf)
             kwargs_psf_list.append(kwargs_psf)
             kwargs_data_list.append(kwargs_data)
             x_detector.append(xy[0])
@@ -283,7 +283,7 @@ class DataPreparation(object):
 
 
 
-    def plot_segmentation(self,image_data,segments_deblend,xcenter,ycenter,c_index,font_size=15):
+    def plot_segmentation(self,image_data,segments_deblend,xcenter,ycenter,c_index,font_size=20):
         """
         show segmentation map of image_data
         :param image_data:
@@ -308,7 +308,7 @@ class DataPreparation(object):
 
 
 
-    def plot_data_assemble(self,kwargs_seg,add_mask=5,img_name='datapreparation.pdf',cutout_text='lensed image',font_size=15):
+    def plot_data_assemble(self,kwargs_seg,add_mask=5,img_name='datapreparation.pdf',cutout_text='lensed image',font_size=20):
         """
 
         :param add_mask:
