@@ -158,10 +158,6 @@ class DataPreparation(object):
                 cutsize_data=cutsize_data
             else:
                 raise ValueError("Please input 'y' or 'n' !")
-     else:
-         _, center_mask_info, _ = self._seg_image(x, y, r_cut=r_cut)
-         _, r_center, _, _, _ = center_mask_info
-         cutsize_data =  r_center + 10
      return cutsize_data
 
 
@@ -270,7 +266,7 @@ class DataPreparation(object):
             x_detector.append(xy[0])
             y_detector.append(xy[1])
             multi_band_list.append([kwargs_data, kwargs_psf, kwargs_numerics])
-            print("======lensed image " + repr(i + 1) + ", assembled data======")
+            print("======lensed image " + repr(i + 1) + ", assembled image======")
             self.plot_data_assemble(kwargs_seg=kwargs_seg, add_mask=add_mask,img_name=img_name+repr(i+1)+'.pdf',cutout_text=cutout_text+repr(i+1))
         kwargs_data_joint = {'multi_band_list': multi_band_list, 'multi_band_type': multi_band_type}
         return x_detector,y_detector,kwargs_data_joint
@@ -322,23 +318,23 @@ class DataPreparation(object):
         fig, (ax1, ax2, ax3,ax4) = plt.subplots(1, 4, figsize=(16, 10))
         ax1.imshow(image, origin='lower', cmap="gist_heat")
         ax1.set_title('Cutout Image',fontsize =font_size)
-        ax1.text(image.shape[0] * 0.4, image.shape[0] * 0.05, cutout_text,size=12, color='white')
+        ax1.text(image.shape[0] * 0.4, image.shape[0] * 0.05, cutout_text,size=12, color='white',weight="bold")
         ax1.axis('off')
         segments_deblend_list, xcenter, ycenter, c_index=kwargs_seg
         ax2.imshow(segments_deblend_list, origin='lower')
         for i in range(len(xcenter)):
-            ax2.text(xcenter[i] * 1.1, ycenter[i], 'Seg' + repr(i), color='w')
+            ax2.text(xcenter[i] * 1.1, ycenter[i], 'Seg' + repr(i), color='r',weight="bold")
         ax2.text(image.shape[0] * 0.5, image.shape[0] * 0.05, 'Seg ' + repr(c_index) + ' ' + 'in center',
-                 size=12, color='white')
+                 size=12, color='white',weight="bold")
         ax2.set_title('Segmentations (S/N >' + repr(self.snr) + ')',fontsize =font_size)
         ax2.axis('off')
         ax3.imshow(img_mask+mask, origin='lower',cmap="gist_heat")
         ax3.set_title('Selected pixels',fontsize =font_size)
-        ax3.text(image.shape[0] * 0.4, image.shape[0] * 0.05, 'pixels S/N >' + repr(self.snr) + ')',size=12, color='white')
-        ax3.text(image.shape[0] * 0.4, image.shape[0] * 0.9, 'additional pixels', size=12, color='r')
+        ax3.text(image.shape[0] * 0.4, image.shape[0] * 0.05, 'pixels S/N >' + repr(self.snr) + ')',size=12, color='white',weight="bold")
+        ax3.text(image.shape[0] * 0.4, image.shape[0] * 0.9, 'additional pixels', size=12, color='r',weight="bold")
         ax3.axis('off')
         ax4.imshow(picked_data, origin='lower',cmap="gist_heat")
-        ax4.set_title('Data',fontsize =font_size)
+        ax4.set_title('Processed Image',fontsize =font_size)
         ax4.axis('off')
         plt.show()
         fig.savefig(img_name)
