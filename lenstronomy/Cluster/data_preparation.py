@@ -324,7 +324,7 @@ class DataPreparation(object):
         ax2.imshow(segments_deblend_list, origin='lower')
         for i in range(len(xcenter)):
             ax2.text(xcenter[i] * 1.1, ycenter[i], 'Seg' + repr(i), color='r',weight="bold")
-        ax2.text(image.shape[0] * 0.3, image.shape[0] * 0.05, 'Seg ' + repr(c_index) + ' ' + 'in center',
+        ax2.text(image.shape[0] * 0.25, image.shape[0] * 0.05, 'Seg ' + repr(c_index) + ' ' + 'in center',
                  size=12, color='white',weight="bold")
         ax2.set_title('Segmentations (S/N >' + repr(self.snr) + ')',fontsize =font_size)
         ax2.axis('off')
