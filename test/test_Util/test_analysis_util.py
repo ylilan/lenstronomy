@@ -52,5 +52,9 @@ class TestCorrelation(object):
 
 
 
+    def test_bic_model(self):
+        bic=analysis_util.bic_model(0,np.e,1)
+        assert bic == 1
+
 if __name__ == '__main__':
     pytest.main()
