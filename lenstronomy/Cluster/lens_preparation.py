@@ -98,7 +98,7 @@ class LensPreparation(object):
                 G2_c = (g2_c - g4_c) * 0.5 - g4_c
                 kwargs_lens.append({'F1': F1_c, 'F2': F2_c, 'G1': G1_c, 'G2': G2_c, 'ra_0': ra_center, 'dec_0': dec_center})
         magnification=NumericLens(['INTERPOL']).magnification(util.image2array(xaxes),
-                                                                 util.image2array(yaxes), kwargs=kwargs_lens_in)
+                                                                 util.image2array(yaxes), kwargs=kwargs_lens_in ,diff = diff)
         magnification=np.abs(magnification.mean())
         return kwargs_lens, magnification
 
@@ -107,7 +107,7 @@ class LensPreparation(object):
 
 
 
-    def kwargs_lens_configuration(self,ximg_list, yimg_list, kwargs_data_joint,
+    def kwargs_lens_configuration(self,ximg_list, yimg_list, kwargs_data_joint, fixed_index=None,
                                   lens_model_list_in= ['SHIFT','SHEAR','CONVERGENCE','FLEXIONFG'], diff = 0.01):
         self.lens_model_list_in = lens_model_list_in
         kwagrs_lens_list = []
@@ -131,10 +131,13 @@ class LensPreparation(object):
              betay_list.append(betay)
              mag_map_list.append(magnification)
         self.magnification =  mag_map_list
-        if len(ximg_list) > 1:
-            img_index = np.where(mag_map_list == np.min(mag_map_list))[0][0]
+        if fixed_index is not None:
+            img_index = fixed_index
         else:
-            img_index = 0
+            if len(ximg_list) > 1:
+                img_index = np.where(mag_map_list == np.min(mag_map_list))[0][0]
+            else:
+                img_index = 0
         self.img_index = img_index
         dbetax = betax_list - betax_list[img_index]
         dbetay = betay_list - betay_list[img_index]

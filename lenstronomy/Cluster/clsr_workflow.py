@@ -134,7 +134,8 @@ class ClsrWorkflow(object):
         print("parameters in order: ", param_mcmc)
         print("number of evaluations in the MCMC process: ", np.shape(samples_mcmc)[0])
         if not samples_mcmc == []:
-          corner.corner(samples_mcmc, labels=param_mcmc, show_titles=True)
+            fig=corner.corner(samples_mcmc, labels=param_mcmc, show_titles=True)
+        return fig
 
     def plot_modeling(self,kwargs_result,deltaPix_s=0.03,numPix_s=None,  multi_band_type='joint-linear',
                       text='sys', text_source='',img_name='sys',font_size=20,):
@@ -179,7 +180,7 @@ class ClsrWorkflow(object):
 
 
 
-    def source_flux_rh(self,kwargs_results,deltaPix_s,numPix):
+    def source_flux_rh(self,kwargs_result,deltaPix_s,numPix):
         """
         A function to calculate flux, half light radius of the given modeling result.
         :param kwargs_results: modeling result
@@ -189,8 +190,8 @@ class ClsrWorkflow(object):
         """
         imageModel = class_creator.create_im_sim(self.multi_band_list, multi_band_type='single-band',
                                                  kwargs_model=self.kwargs_model, bands_compute=[True], band_index=0)
-        kwargs_source = kwargs_results['kwargs_source']
-        _, _, _, _ = imageModel.image_linear_solve(inv_bool=True, **kwargs_results)
+        kwargs_source = kwargs_result['kwargs_source']
+        _, _, _, _ = imageModel.image_linear_solve(inv_bool=True, **kwargs_result)
 
         x_center = kwargs_source[0]['center_x']
         y_center = kwargs_source[0]['center_y']

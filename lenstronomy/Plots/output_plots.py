@@ -656,12 +656,12 @@ class ModelBandPlot(object):
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
         ax.autoscale(False)
-        scale_bar(ax, self._frame_size, dist=1, text='1"', color='k',
+        scale_bar(ax, self._frame_size, dist=1, text='1.0"', color='k',
                   font_size=font_size)
         text_description(ax, self._frame_size, text=text, color="k",
                          backgroundcolor='w', font_size=font_size)
         if not no_arrow:
-            coordinate_arrows(ax, self._frame_size, self._coords, color='w',
+            coordinate_arrows(ax, self._frame_size, self._coords, color='k',
                               arrow_size=self._arrow_size, font_size=font_size)
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", size="5%", pad=0.05)
@@ -785,6 +785,7 @@ class ModelBandPlot(object):
                   color='w',
                   flipped=False,
                   font_size=font_size)
+
         if 'no_arrow' not in kwargs or not kwargs['no_arrow']:
             coordinate_arrows(ax, self._frame_size, self._coords, color='w',
                               arrow_size=self._arrow_size, font_size=font_size)

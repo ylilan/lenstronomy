@@ -33,7 +33,7 @@ class SourcePreparation(object):
                 kwargs_source_sigma.append({'R_sersic': deltaPix, 'n_sersic': 0.1, 'e1': 0.1,
                                             'e2': 0.1, 'center_x': 0.03, 'center_y': 0.03})
                 kwargs_lower_source.append({'R_sersic': 0, 'n_sersic': 0.1,
-                                            'e1': -1, 'e2': -1, 'center_x': betax - 1,'center_y': betax - 1})
+                                            'e1': -1, 'e2': -1, 'center_x': betax - 1,'center_y': betay - 1})
                 kwargs_upper_source.append({'R_sersic': 100, 'n_sersic': 8, 'e1': 1, 'e2': 1,
                                             'center_x': betax + 1, 'center_y': betay + 1})
                 kwargs_fixed_source.append({})
