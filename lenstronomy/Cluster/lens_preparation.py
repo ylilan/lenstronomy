@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import numpy as np
 import lenstronomy.Util.util as util
 from lenstronomy.LensModel.numeric_lens_differentials import NumericLens
@@ -211,7 +213,7 @@ class LensPreparation(object):
         lens_add_fixed_list = []
         for i in range(self.num_img):
             if i == self.img_index:
-                print "lens model keep fixed in frame:", i + 1
+                print ("lens model keep fixed in frame:", i + 1)
             else:
                 lens_remove_index = (i + 1) * num_lens_model_list_in - 1
                 lens_remove_fixed_list.append([lens_remove_index, ['G1', 'G2', 'F1', 'F2'], [0, 0, 0, 0]])
