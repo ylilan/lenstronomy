@@ -37,25 +37,44 @@ class LensPreparation(object):
            alphax_map_hat = -fits.open(xdeflection)[0].data
            if lenseq == '1':
                alphax_map_hat = alphax_map_hat
-           elif lenseq == '-1':
+           elif lenseq =='-1':
                alphax_map_hat = -alphax_map_hat
            self.alphax = alphax_map_hat * dlsds
 
        if ydeflection is None:
-           self.alphay =None
+           self.alphay = None
        else:
            alphay_map_hat = -fits.open(ydeflection)[0].data
            if lenseq == '1':
                alphay_map_hat = alphay_map_hat
-           elif lenseq == '-1':
+           elif lenseq =='-1':
                alphay_map_hat = -alphay_map_hat
            self.alphay = alphay_map_hat * dlsds
-       self.gamma1 = gamma1* dlsds
-       self.gamma2 = gamma2* dlsds
-       self.kappa = kappa* dlsds
+       if lenseq == '1':
+           gamma1_map = -fits.open(gamma1)[0].data
+           gamma2_map = -fits.open(gamma2)[0].data
+           kappa_map  = -fits.open(kappa)[0].data
+       elif lenseq == '-1':
+           gamma1_map = fits.open(gamma1)[0].data
+           gamma2_map = fits.open(gamma2)[0].data
+           kappa_map  = fits.open(kappa)[0].data
+
+       self.gamma1 = gamma1_map* dlsds
+       self.gamma2 = gamma2_map* dlsds
+       self.kappa =  kappa_map * dlsds
 
     def kwargs_lens_configuration(self,ximg_list, yimg_list, kwargs_data_joint, fixed_index=None,
                                   lens_model_list= ['SHIFT','SHEAR','CONVERGENCE','FLEXIONFG'], diff = 0.1):
+        """
+
+        :param ximg_list: list, x cooridinate of lensed image
+        :param yimg_list: list, y cooridinate of lensed image
+        :param kwargs_data_joint: list, image data arguments
+        :param fixed_index: int, fixed image index
+        :param lens_model_list: string list, name of lens model
+        :param diff: float, scale of derivation
+        :return:
+        """
 
         if fixed_index is not None:
             img_index = fixed_index
@@ -120,11 +139,12 @@ class LensPreparation(object):
     def lens_param_initial(self, x, y, kwargs_data, lens_model_list, diff):
         """
         Initial lens parameters, deduced from deflection maps or read directly
-        :param x:
-        :param y:
-        :param kwargs_data:
-        :param lens_model_list:
-        :param diff:
+        :param x: x coordinate of lensed image
+        :param y: y coordinate of lensed image
+        :param kwargs_data: arguments of image data
+        :param lens_model_list: list of choices of lens model
+        :param diff: scale of derivation
+        :return: list of lens parameters
         :return:
         """
         if self.alphax is not None and self.alphay is not None:
@@ -136,6 +156,14 @@ class LensPreparation(object):
 
 
     def _read_kwargs_lens(self,x,y, kwargs_data,lens_model_list=['SHIFT','SHEAR','CONVERGENCE','FLEXIONFG']):
+        """
+        Initial lens parameters, read from shear, convergence
+        :param x: x coordinate of lensed image
+        :param y: y coordinate of lensed image
+        :param kwargs_data: arguments of image data
+        :param lens_model_list: list of choices of lens model
+        :return: list of lens parameters
+        """
         imageData = ImageData(**kwargs_data)
         r_cut = (np.shape(imageData.data)[0] - 1) / 2
         xaxes, yaxes = imageData.pixel_coordinates
@@ -159,11 +187,13 @@ class LensPreparation(object):
 
     def _cal_kwargs_lens(self,x, y, kwargs_data, lens_model_list, diff= 0.01,):
         """
-        This function returns list type of kwargs of lens models.
-        :param lens_model_list: list of strings with lens model names
-        :param alphax_shift: shift the source's x position
-        :param alphay_shift: shift the source's y position
-        :return:  a list of kwargs of lens models corresponding to the lens models existed in lens_model_list
+        Initial lens parameters, deduced from deflection maps.
+        :param x: x coordinate of lensed image
+        :param y: y coordinate of lensed image
+        :param kwargs_data: arguments of image data
+        :param lens_model_list: list of choices of lens model
+        :param diff: scale of derivation
+        :return: list of lens parameters
         """
         imageData = ImageData(**kwargs_data)
         r_cut = (np.shape(imageData.data)[0] - 1) / 2
@@ -211,6 +241,11 @@ class LensPreparation(object):
 
 
     def model_index_list(self,num_img=None, lens_model_list=None):
+        """
+        :param num_img: number of lensed image
+        :param lens_model_list: lens model list
+        :return:
+        """
         lensmodel_list = []
         index_lens_model_list = []
         if num_img is None:
