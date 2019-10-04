@@ -1,3 +1,4 @@
+from __future__ import print_function
 from lenstronomy.Workflow.fitting_sequence import FittingSequence
 import numpy as np
 

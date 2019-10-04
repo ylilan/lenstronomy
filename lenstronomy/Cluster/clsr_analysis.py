@@ -1,3 +1,4 @@
+from __future__ import print_function
 from lenstronomy.Plots.output_plots import ModelPlot
 import lenstronomy.Plots.output_plots as out_plot
 import matplotlib.pyplot as plt
