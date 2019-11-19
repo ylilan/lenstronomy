@@ -3,7 +3,6 @@ __author__ = 'sibirrer'
 #this file contains a class which describes the surface brightness of the light models
 
 import numpy as np
-import copy
 from lenstronomy.LightModel.light_model_base import LightModelBase
 
 
@@ -43,11 +42,12 @@ class LinearBasis(LightModelBase):
         """
         response = []
         n = 0
+        bool_list = self._bool_list(k=k)
         for i, model in enumerate(self.profile_type_list):
-            if k is None or k == i:
+            if bool_list[i] is True:
                 if model in ['SERSIC', 'SERSIC_ELLIPSE', 'CORE_SERSIC', 'HERNQUIST', 'HERNQUIST_ELLIPSE', 'PJAFFE',
                              'PJAFFE_ELLIPSE', 'GAUSSIAN', 'GAUSSIAN_ELLIPSE', 'POWER_LAW', 'NIE', 'CHAMELEON',
-                             'DOUBLE_CHAMELEON', 'TRIPLE_CHAMELEON', 'UNIFORM', 'INTERPOL']:
+                             'DOUBLE_CHAMELEON', 'TRIPLE_CHAMELEON', 'UNIFORM', 'INTERPOL', 'ELLIPSOID']:
                     kwargs_new = kwargs_list[i].copy()
                     new = {'amp': 1}
                     kwargs_new.update(new)
@@ -99,7 +99,7 @@ class LinearBasis(LightModelBase):
         for i, model in enumerate(self.profile_type_list):
             if model in ['SERSIC', 'SERSIC_ELLIPSE', 'CORE_SERSIC', 'HERNQUIST', 'HERNQUIST_ELLIPSE', 'PJAFFE',
                              'PJAFFE_ELLIPSE', 'GAUSSIAN', 'GAUSSIAN_ELLIPSE', 'POWER_LAW', 'NIE', 'CHAMELEON',
-                             'DOUBLE_CHAMELEON', 'TRIPLE_CHAMELEON', 'UNIFORM', 'INTERPOL']:
+                             'DOUBLE_CHAMELEON', 'TRIPLE_CHAMELEON', 'UNIFORM', 'INTERPOL', 'ELLIPSOID']:
                 n_list += [1]
             elif model in ['MULTI_GAUSSIAN', 'MULTI_GAUSSIAN_ELLIPSE']:
                 num = len(kwargs_list[i]['sigma'])
@@ -126,7 +126,7 @@ class LinearBasis(LightModelBase):
         for k, model in enumerate(self.profile_type_list):
             if model in ['SERSIC', 'SERSIC_ELLIPSE', 'CORE_SERSIC', 'HERNQUIST', 'PJAFFE', 'PJAFFE_ELLIPSE',
                          'HERNQUIST_ELLIPSE', 'GAUSSIAN', 'GAUSSIAN_ELLIPSE', 'POWER_LAW', 'NIE', 'CHAMELEON',
-                         'DOUBLE_CHAMELEON', 'TRIPLE_CHAMELEON', 'UNIFORM', 'INTERPOL']:
+                         'DOUBLE_CHAMELEON', 'TRIPLE_CHAMELEON', 'UNIFORM', 'INTERPOL', 'ELLIPSOID']:
                 kwargs_list[k]['amp'] = param[i]
                 i += 1
             elif model in ['MULTI_GAUSSIAN', 'MULTI_GAUSSIAN_ELLIPSE']:
@@ -155,6 +155,6 @@ class LinearBasis(LightModelBase):
             kwargs_fixed = kwargs_fixed_list[k]
             param_names = self.param_name_list[k]
             if 'amp' in param_names:
-                if not 'amp' in kwargs_fixed:
+                if 'amp' not in kwargs_fixed:
                     kwargs_fixed['amp'] = 1
         return kwargs_fixed_list

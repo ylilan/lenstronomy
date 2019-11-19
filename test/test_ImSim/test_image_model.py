@@ -42,7 +42,7 @@ class TestImageModel(object):
         psf_class = PSF(**kwargs_psf)
 
         # 'EXERNAL_SHEAR': external shear
-        kwargs_shear = {'e1': 0.01, 'e2': 0.01}  # gamma_ext: shear strength, psi_ext: shear angel (in radian)
+        kwargs_shear = {'gamma1': 0.01, 'gamma2': 0.01}  # gamma_ext: shear strength, psi_ext: shear angel (in radian)
         phi, q = 0.2, 0.8
         e1, e2 = param_util.phi_q2_ellipticity(phi, q)
         kwargs_spemd = {'theta_E': 1., 'gamma': 1.8, 'center_x': 0, 'center_y': 0, 'e1': e1, 'e2': e2}
@@ -138,7 +138,7 @@ class TestImageModel(object):
         assert num_param_linear == 3
 
     def test_update_data(self):
-        kwargs_data = sim_util.data_configure_simple(numPix=10, deltaPix=1, exposure_time=1, sigma_bkg=1, inverse=True)
+        kwargs_data = sim_util.data_configure_simple(numPix=10, deltaPix=1, exposure_time=1, background_rms=1, inverse=True)
         data_class = ImageData(**kwargs_data)
         self.imageModel.update_data(data_class)
         assert self.imageModel.Data.num_pixel == 100
@@ -148,7 +148,7 @@ class TestImageModel(object):
 
         numPix = 100
         deltaPix = 0.05
-        kwargs_data = sim_util.data_configure_simple(numPix, deltaPix, exposure_time=1, sigma_bkg=1)
+        kwargs_data = sim_util.data_configure_simple(numPix, deltaPix, exposure_time=1, background_rms=1)
         data_class = ImageData(**kwargs_data)
         kernel = np.zeros((5, 5))
         kernel[2, 2] = 1
@@ -195,7 +195,7 @@ class TestImageModel(object):
         kwargs_lens = [{'theta_E': 1, 'center_x': 0, 'center_y': 0}]
         numPix = 64
         deltaPix = 0.13
-        kwargs_data = sim_util.data_configure_simple(numPix, deltaPix, exposure_time=1, sigma_bkg=1)
+        kwargs_data = sim_util.data_configure_simple(numPix, deltaPix, exposure_time=1, background_rms=1)
         data_class = ImageData(**kwargs_data)
 
         psf_type = "GAUSSIAN"
@@ -210,7 +210,7 @@ class TestImageModel(object):
     def test_error_map_source(self):
         sourceModel = LightModel(light_model_list=['UNIFORM', 'UNIFORM'])
 
-        kwargs_data = sim_util.data_configure_simple(numPix=10, deltaPix=1, exposure_time=1, sigma_bkg=1)
+        kwargs_data = sim_util.data_configure_simple(numPix=10, deltaPix=1, exposure_time=1, background_rms=1)
         data_class = ImageData(**kwargs_data)
 
         psf_type = "GAUSSIAN"
@@ -225,7 +225,7 @@ class TestImageModel(object):
         assert error_map[0] == 2
 
     def test_create_empty(self):
-        kwargs_data = sim_util.data_configure_simple(numPix=10, deltaPix=1, exposure_time=1, sigma_bkg=1)
+        kwargs_data = sim_util.data_configure_simple(numPix=10, deltaPix=1, exposure_time=1, background_rms=1)
         data_class = ImageData(**kwargs_data)
         imageModel_empty = ImageModel(data_class, PSF())
         assert imageModel_empty._psf_error_map == False
@@ -234,7 +234,7 @@ class TestImageModel(object):
         assert flux.all() == 0
 
     def test_extinction_map(self):
-        kwargs_data = sim_util.data_configure_simple(numPix=10, deltaPix=1, exposure_time=1, sigma_bkg=1)
+        kwargs_data = sim_util.data_configure_simple(numPix=10, deltaPix=1, exposure_time=1, background_rms=1)
         data_class = ImageData(**kwargs_data)
         extinction_class = DifferentialExtinction(optical_depth_model=['UNIFORM'], tau0_index=0)
         imageModel = ImageModel(data_class, PSF(), extinction_class=extinction_class)
@@ -243,7 +243,7 @@ class TestImageModel(object):
 
     def test_error_response(self):
 
-        C_D_response, model_error = self.imageModel._error_response(self.kwargs_lens, self.kwargs_ps)
+        C_D_response, model_error = self.imageModel._error_response(self.kwargs_lens, self.kwargs_ps, kwargs_special=None)
         assert len(model_error) == 100
         print(np.sum(model_error))
         npt.assert_almost_equal(np.sum(model_error), 0.0019271126921470687, decimal=3)
