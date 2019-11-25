@@ -86,7 +86,7 @@ class ModelBandPlot(object):
         ax.get_yaxis().set_visible(False)
         ax.autoscale(False)
 
-        plot_util.scale_bar(ax, self._frame_size, dist=1, text='1"', font_size=font_size)
+        plot_util.scale_bar(ax, self._frame_size, dist=0.5, text='0.5"', font_size=font_size)
         plot_util.text_description(ax, self._frame_size, text=text, color="w",
                          backgroundcolor='k', font_size=font_size)
 
@@ -120,7 +120,7 @@ class ModelBandPlot(object):
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
         ax.autoscale(False)
-        plot_util.scale_bar(ax, self._frame_size, dist=1, text='1"', font_size=font_size)
+        plot_util.scale_bar(ax, self._frame_size, dist=0.5, text='0.5"', font_size=font_size)
         plot_util.text_description(ax, self._frame_size, text=text, color="w",
                          backgroundcolor='k', font_size=font_size)
         if 'no_arrow' not in kwargs or not kwargs['no_arrow']:
@@ -192,12 +192,12 @@ class ModelBandPlot(object):
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
         ax.autoscale(False)
-        plot_util.scale_bar(ax, self._frame_size, dist=1, text='1"', color='k',
+        plot_util.scale_bar(ax, self._frame_size, dist=0.5, text='0.5"', color='k',
                   font_size=font_size)
         plot_util.text_description(ax, self._frame_size, text=text, color="k",
                          backgroundcolor='w', font_size=font_size)
         if not no_arrow:
-            plot_util.coordinate_arrows(ax, self._frame_size, self._coords, color='w',
+            plot_util.coordinate_arrows(ax, self._frame_size, self._coords, color='k',
                               arrow_size=self._arrow_size, font_size=font_size)
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", size="5%", pad=0.05)
