@@ -120,3 +120,41 @@ History
 * new lens models added
 * updated Workflow module
 * implemented differential extinction
+
+0.9.2 (2019-8-29)
++++++++++++++++++
+* non-linear solver for 4 point sources updated
+* Moffat PSF for GalKin in place
+* Likelihood module for point sources and catalogue data improved
+* Design improvements in the LensModel module
+* minor stability updates
+
+0.9.3 (2019-9-25)
++++++++++++++++++
+* improvements in SimulationAPI design
+* improvements in astrometric uncertainty handling of parameters
+* local arc lens model description and differentials
+
+
+1.0.0 (2019-9-25)
++++++++++++++++++
+* marking version as 5 - Stable/production mode
+
+1.0.1 (2019-10-01)
+++++++++++++++++++
+* compatible with emcee 3.0.0
+* removed CosmoHammer MCMC sampling
+
+1.1.0 (2019-11-5)
++++++++++++++++++
+* plotting routines split in different files
+* curved arc parameterization and eigenvector differentials
+* numerical differentials as part of the LensModel core class
+
+
+1.2.0 (2019-11-17)
+++++++++++++++++++
+* Analysis module re-designed
+* GalKin module partially re-designed
+* Added cosmography module
+* parameterization of cartesian shear coefficients changed

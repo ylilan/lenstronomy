@@ -233,6 +233,8 @@ class LensEquationSolver(object):
         mag_list = np.array(mag_list)
         x_mins_sorted = util.selectBest(x_mins, mag_list, numImages)
         y_mins_sorted = util.selectBest(y_mins, mag_list, numImages)
+        if arrival_time_sort is True:
+            x_mins_sorted, y_mins_sorted = self.sort_arrival_times(x_mins_sorted, y_mins_sorted, kwargs_lens)
         return x_mins_sorted, y_mins_sorted
 
     def sort_arrival_times(self, x_mins, y_mins, kwargs_lens):
@@ -251,12 +253,10 @@ class LensEquationSolver(object):
         if len(x_mins) <= 1:
             return x_mins, y_mins
         x_source, y_source = self.lensModel.ray_shooting(x_mins, y_mins, kwargs_lens)
-        x_source = np.mean(x_source)
-        y_source = np.mean(y_source)
         if self.lensModel.multi_plane is True:
             arrival_time = self.lensModel.arrival_time(x_mins, y_mins, kwargs_lens)
         else:
-            fermat_pot = self.lensModel.fermat_potential(x_mins, y_mins, x_source, y_source, kwargs_lens)
+            fermat_pot = self.lensModel.fermat_potential(x_mins, y_mins, kwargs_lens)
             arrival_time = fermat_pot
         idx = np.argsort(arrival_time)
         x_mins = np.array(x_mins)[idx]

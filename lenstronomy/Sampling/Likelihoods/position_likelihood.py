@@ -68,13 +68,13 @@ class PositionLikelihood(object):
         if self._force_no_add_image:
             bool = self.check_additional_images(kwargs_ps, kwargs_lens)
             if bool is True:
-                logL -= 10**10
+                logL -= 10.**5
                 if verbose is True:
                     print('force no additional image penalty as additional images are found!')
         if self._restrict_number_images is True:
             ra_image_list, dec_image_list = self._pointSource.image_position(kwargs_ps=kwargs_ps, kwargs_lens=kwargs_lens)
             if len(ra_image_list[0]) > self._max_num_images:
-                logL -= 10**10
+                logL -= 10.**5
                 if verbose is True:
                     print('Number of images found %s exceeded the limited number allowed %s' % (len(ra_image_list[0]), self._max_num_images))
         if self._source_position_likelihood is True:
@@ -84,6 +84,7 @@ class PositionLikelihood(object):
                 print('source position likelihood %s' % logL_source_pos)
         if self._image_position_likelihood is True:
             logL_image_pos = self.image_position_likelihood(kwargs_ps=kwargs_ps, kwargs_lens=kwargs_lens, sigma=self._position_sigma)
+            logL += logL_image_pos
             if verbose is True:
                 print('image position likelihood %s' % logL_image_pos)
         return logL
@@ -105,7 +106,7 @@ class PositionLikelihood(object):
                 if verbose is True:
                     print('Image positions do not match to the same source position to the required precision. '
                           'Achieved: %s, Required: %s.' % (dist, tolerance))
-                return dist * 10**10
+                return dist * 10**5
         return 0
 
     def check_additional_images(self, kwargs_ps, kwargs_lens):
@@ -140,7 +141,7 @@ class PositionLikelihood(object):
             dist = (delta_x ** 2 + delta_y ** 2) / sigma ** 2 / 2
             logL = -np.sum(dist)
             if np.isnan(logL) is True:
-                return -10 ** 15
+                return -np.inf
             return logL
         else:
             return 0
@@ -186,10 +187,22 @@ class PositionLikelihood(object):
             try:
                 Sigma_inv = inv(Sigma_beta)
             except:
-                return -10**15
+                return -np.inf
             chi2 = delta.T.dot(Sigma_inv.dot(delta))[0][0]
             logL -= chi2/2
         return logL
+
+    @property
+    def num_data(self):
+        """
+
+        :return: integer, number of data points assocated with the class instance
+        """
+        num = 0
+        if self._image_position_likelihood is True:
+            for i in range(len(self._ra_image_list)):  # sum over the images of the different model components
+                num += len(self._ra_image_list[i]) * 2
+        return num
 
 
 # Equation (13) in Birrer & Treu 2019

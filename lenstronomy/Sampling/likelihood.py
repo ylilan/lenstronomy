@@ -6,7 +6,8 @@ from lenstronomy.Sampling.Likelihoods.image_likelihood import ImageLikelihood
 from lenstronomy.Sampling.Likelihoods.position_likelihood import PositionLikelihood
 from lenstronomy.Sampling.Likelihoods.flux_ratio_likelihood import FluxRatioLikelihood
 from lenstronomy.Sampling.Likelihoods.prior_likelihood import PriorLikelihood
-import lenstronomy.Util.class_creator as class_reator
+import lenstronomy.Util.class_creator as class_creator
+import numpy as np
 
 
 class LikelihoodModule(object):
@@ -26,7 +27,11 @@ class LikelihoodModule(object):
                  force_minimum_source_surface_brightness=False, flux_min=0, image_likelihood_mask_list=None,
                  flux_ratio_likelihood=False, kwargs_flux_compute={}, prior_lens=[], prior_source=[], prior_extinction=[],
                  prior_lens_light=[], prior_ps=[], prior_special=[], prior_lens_kde=[], prior_source_kde=[], prior_lens_light_kde=[], prior_ps_kde=[],
-                 prior_special_kde=[], prior_extinction_kde=[], condition_definition=None):
+                 prior_special_kde=[], prior_extinction_kde=[],
+                 prior_lens_lognormal=[], prior_source_lognormal=[], prior_extinction_lognormal=[],
+                 prior_lens_light_lognormal=[], prior_ps_lognormal=[],
+                 prior_special_lognormal=[],
+                 condition_definition=None):
         """
         initializing class
 
@@ -69,16 +74,20 @@ class LikelihoodModule(object):
 
         self.param = param_class
         self._lower_limit, self._upper_limit = self.param.param_limits()
-        lens_model_class, source_model_class, lens_light_model_class, point_source_class, extinction_class = class_reator.create_class_instances(**kwargs_model)
+        lens_model_class, source_model_class, lens_light_model_class, point_source_class, extinction_class = class_creator.create_class_instances(**kwargs_model)
         self.PointSource = point_source_class
 
         self._prior_likelihood = PriorLikelihood(prior_lens, prior_source, prior_lens_light, prior_ps, prior_special, prior_extinction,
                                                  prior_lens_kde, prior_source_kde, prior_lens_light_kde, prior_ps_kde,
-                                                 prior_special_kde, prior_extinction_kde)
+                                                 prior_special_kde, prior_extinction_kde,
+                                                 prior_lens_lognormal, prior_source_lognormal,
+                                                 prior_lens_light_lognormal, prior_ps_lognormal,
+                                                 prior_special_lognormal, prior_extinction_lognormal,
+                                                 )
         self._time_delay_likelihood = time_delay_likelihood
         if self._time_delay_likelihood is True:
             self.time_delay_likelihood = TimeDelayLikelihood(time_delays_measured, time_delays_uncertainties,
-                                                             lens_model_class, point_source_class, param_class)
+                                                             lens_model_class, point_source_class)
 
         self._image_likelihood = image_likelihood
         if self._image_likelihood is True:
@@ -131,6 +140,14 @@ class LikelihoodModule(object):
         """
         #extract parameters
         kwargs_return = self.param.args2kwargs(args)
+        if self._check_bounds is True:
+            penalty, bound_hit = self.check_bounds(args, self._lower_limit, self._upper_limit, verbose=verbose)
+            if bound_hit is True:
+                #print(-penalty, 'test penalty')
+                return -np.inf
+        return self.log_likelihood(kwargs_return, verbose=verbose)
+
+    def log_likelihood(self, kwargs_return, verbose=False):
         kwargs_lens, kwargs_source, kwargs_lens_light, kwargs_ps, kwargs_special = kwargs_return['kwargs_lens'], \
                                                                                    kwargs_return['kwargs_source'], \
                                                                                    kwargs_return['kwargs_lens_light'], \
@@ -139,11 +156,7 @@ class LikelihoodModule(object):
         #generate image and computes likelihood
         self._reset_point_source_cache(bool=True)
         logL = 0
-        if self._check_bounds is True:
-            penalty, bound_hit = self.check_bounds(args, self._lower_limit, self._upper_limit, verbose=verbose)
-            logL -= penalty
-            if bound_hit:
-                return logL, None
+
         if self._image_likelihood is True:
             logL_image = self.image_likelihood.logL(**kwargs_return)
             logL += logL_image
@@ -157,7 +170,7 @@ class LikelihoodModule(object):
         if self._check_positive_flux is True:
             bool = self.param.check_positive_flux(kwargs_source, kwargs_lens_light, kwargs_ps)
             if bool is False:
-                logL -= 10**10
+                logL -= 10**5
                 if verbose is True:
                     print('non-positive surface brightness parameters detected!')
         if self._flux_ratio_likelihood is True:
@@ -168,7 +181,7 @@ class LikelihoodModule(object):
             logL_flux_ratios = self.flux_ratio_likelihood.logL(x_pos, y_pos, kwargs_lens, kwargs_special)
             logL += logL_flux_ratios
             if verbose is True:
-                print('time-delay logL = %s' % logL_flux_ratios)
+                print('flux ratio logL = %s' % logL_flux_ratios)
         logL += self._position_likelihood.logL(kwargs_lens, kwargs_ps, kwargs_special, verbose=verbose)
         logL_prior = self._prior_likelihood.logL(**kwargs_return)
         logL += logL_prior
@@ -180,21 +193,22 @@ class LikelihoodModule(object):
             if verbose is True:
                 print('Condition definition logL = %s' % logL_cond)
         self._reset_point_source_cache(bool=False)
-        return logL, None
+        return logL#, None
 
     @staticmethod
     def check_bounds(args, lowerLimit, upperLimit, verbose=False):
         """
         checks whether the parameter vector has left its bound, if so, adds a big number
         """
-        penalty = 0
+        penalty = 0.
         bound_hit = False
         for i in range(0, len(args)):
             if args[i] < lowerLimit[i] or args[i] > upperLimit[i]:
-                penalty = 10**15
+                penalty = 10.**5
                 bound_hit = True
                 if verbose is True:
                     print('parameter %s with value %s hit the bounds [%s, %s] ' % (i, args[i], lowerLimit[i], upperLimit[i]))
+                return penalty, bound_hit
         return penalty, bound_hit
 
     @property
@@ -208,6 +222,9 @@ class LikelihoodModule(object):
             num_data += self.image_likelihood.num_data
         if self._time_delay_likelihood is True:
             num_data += self.time_delay_likelihood.num_data
+        if self._flux_ratio_likelihood is True:
+            num_data += self.flux_ratio_likelihood.num_data
+        num_data += self._position_likelihood.num_data
         return num_data
 
     @property
@@ -221,7 +238,7 @@ class LikelihoodModule(object):
         num_linear = 0
         if self._image_likelihood is True:
             num_linear = self.image_likelihood.num_param_linear(**kwargs)
-        num_param, _ = self.param.num_param()
+        num_param, param_names = self.param.num_param()
         return self.num_data - num_param - num_linear
 
     def __call__(self, a):
@@ -230,9 +247,10 @@ class LikelihoodModule(object):
     def likelihood(self, a):
         return self.logL(a)
 
-    def computeLikelihood(self, ctx):
-        logL, _ = self.logL(ctx.getParams())
-        return logL
+    def likelihood_derivative(self, a):
+        """
 
-    def setup(self):
-        pass
+        :param a: array
+        :return: logL, derivative estimatoe (None)
+        """
+        return self.logL(a), None
